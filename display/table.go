@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"wclogs-cli/models"
+
+	"github.com/fatih/color"
 )
 
 // TableOptions configures how the table is displayed
@@ -13,6 +15,7 @@ type TableOptions struct {
 	TopN      int  // Show only top N players (0 = show all)
 	ShowDPS   bool // Show DPS column
 	ShowClass bool // Show class column
+	UseColors bool // Enable color coding by class role
 }
 
 // DefaultTableOptions returns sensible defaults
@@ -21,7 +24,39 @@ func DefaultTableOptions() TableOptions {
 		TopN:      10,   // Show top 10 by default
 		ShowDPS:   true, // Show DPS by default
 		ShowClass: true, // Show class by default
+		UseColors: true, // Enable colors by default
 	}
+}
+
+// getClassColor returns the appropriate color for a class based on role
+func getClassColor(class string) *color.Color {
+	// DPS classes - Bright Red with Background
+	dpsClasses := map[string]bool{
+		"Mage": true, "Warlock": true, "Hunter": true, "Rogue": true,
+		"DeathKnight": true, "DemonHunter": true, "Evoker": true,
+		"Monk": true, "Shaman": true, // Assuming DPS specs
+	}
+
+	// Healer classes - Bright Green with Background
+	healerClasses := map[string]bool{
+		"Priest": true, "Druid": true, "Paladin": true,
+	}
+
+	// Tank classes - Bright Blue with Background (though many can DPS too)
+	tankClasses := map[string]bool{
+		"Warrior": true,
+	}
+
+	if dpsClasses[class] {
+		return color.New(color.FgHiRed, color.Bold, color.BgHiBlack)
+	} else if healerClasses[class] {
+		return color.New(color.FgHiGreen, color.Bold, color.BgHiBlack)
+	} else if tankClasses[class] {
+		return color.New(color.FgHiBlue, color.Bold, color.BgHiBlack)
+	}
+
+	// Default color for unknown classes - Bright Yellow
+	return color.New(color.FgHiYellow, color.Bold)
 }
 
 // DisplayDamageTable displays a formatted damage table
@@ -141,21 +176,43 @@ func printSeparator(nameWidth, classWidth, damageWidth, dpsWidth, percentWidth i
 	fmt.Println(strings.Repeat("=", totalWidth))
 }
 
-// printDataRow prints a single data row
+// printDataRow prints a single data row with optional color coding
 func printDataRow(player *models.Player, percentage float64, nameWidth, classWidth, damageWidth, dpsWidth, percentWidth int, options TableOptions) {
-	fmt.Printf("%-*s", nameWidth, player.Name)
+	if options.UseColors {
+		classColor := getClassColor(player.Class)
 
-	if options.ShowClass {
-		fmt.Printf("  %-*s", classWidth, player.Class)
+		// Print colored name
+		classColor.Printf("%-*s", nameWidth, player.Name)
+
+		if options.ShowClass {
+			fmt.Printf("  ")
+			classColor.Printf("%-*s", classWidth, player.Class)
+		}
+
+		// Print damage and DPS in normal color
+		fmt.Printf("  %*s", damageWidth, player.FormatTotal())
+
+		if options.ShowDPS {
+			fmt.Printf("  %*s", dpsWidth, player.FormatDPS())
+		}
+
+		fmt.Printf("  %*.1f%%", percentWidth-1, percentage)
+	} else {
+		// Original non-colored output
+		fmt.Printf("%-*s", nameWidth, player.Name)
+
+		if options.ShowClass {
+			fmt.Printf("  %-*s", classWidth, player.Class)
+		}
+
+		fmt.Printf("  %*s", damageWidth, player.FormatTotal())
+
+		if options.ShowDPS {
+			fmt.Printf("  %*s", dpsWidth, player.FormatDPS())
+		}
+
+		fmt.Printf("  %*.1f%%", percentWidth-1, percentage)
 	}
-
-	fmt.Printf("  %*s", damageWidth, player.FormatTotal())
-
-	if options.ShowDPS {
-		fmt.Printf("  %*s", dpsWidth, player.FormatDPS())
-	}
-
-	fmt.Printf("  %*.1f%%", percentWidth-1, percentage)
 	fmt.Println()
 }
 
@@ -168,13 +225,34 @@ func calculateTotalDamage(players []*models.Player) float64 {
 	return total
 }
 
-// printSummary prints summary information
+// printSummary prints summary information with a total damage row
 func printSummary(totalPlayers, shownPlayers int, totalDamage float64, options TableOptions) {
+	// Print a total row separator
+	fmt.Println()
+
+	// Summary statistics in bold yellow
+	summaryColor := color.New(color.FgYellow, color.Bold)
+
 	if totalPlayers != shownPlayers {
-		fmt.Printf("Showing top %d of %d players", shownPlayers, totalPlayers)
+		summaryColor.Printf("📊 Showing top %d of %d players", shownPlayers, totalPlayers)
 	} else {
-		fmt.Printf("Showing all %d players", totalPlayers)
+		summaryColor.Printf("📊 Showing all %d players", totalPlayers)
 	}
 
-	fmt.Printf(" | Total Damage: %s\n", models.FormatNumber(int64(totalDamage)))
+	summaryColor.Printf(" | Total Damage: %s", models.FormatNumber(int64(totalDamage)))
+	fmt.Println()
+
+	// Add a legend for colors
+	if options.UseColors {
+		fmt.Println()
+		fmt.Print("🎨 Color Legend: ")
+		color.New(color.FgHiRed, color.Bold, color.BgHiBlack).Print(" DPS ")
+		fmt.Print(" | ")
+		color.New(color.FgHiGreen, color.Bold, color.BgHiBlack).Print(" Healers ")
+		fmt.Print(" | ")
+		color.New(color.FgHiBlue, color.Bold, color.BgHiBlack).Print(" Tanks ")
+		fmt.Print(" | ")
+		color.New(color.FgHiYellow, color.Bold).Print(" Unknown ")
+		fmt.Println()
+	}
 }

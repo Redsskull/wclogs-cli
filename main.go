@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"wclogs-cli/api"
 	"wclogs-cli/auth"
@@ -77,14 +78,17 @@ func main() {
 	// Convert to Player objects
 	players := models.GetPlayersFromTable(tableData)
 
-	// Display the damage table
-	fmt.Println("\n🗡️  DAMAGE TABLE")
-	fmt.Printf("Report: %s | Fight: %d\n", testReportCode, testFightID)
+	// Display the damage table with enhanced styling
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Println("🗡️  WARCRAFT LOGS DAMAGE TABLE")
+	fmt.Printf("📊 Report: %s | ⚔️  Fight: %d | 👥 Players: %d\n", testReportCode, testFightID, len(players))
+	fmt.Println(strings.Repeat("=", 60))
 
 	options := display.DefaultTableOptions()
-	options.TopN = 15 // Show top 15 players
+	options.TopN = 0         // Show all players
+	options.UseColors = true // Enable beautiful colors
 
 	display.DisplayDamageTable(players, options)
 
-	fmt.Println("✨ Success! Damage table displayed successfully.")
+	fmt.Println("\n🎉 Success! Damage table displayed with colors and formatting!")
 }
