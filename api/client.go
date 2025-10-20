@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"wclogs-cli/models"
 )
 
 // Query executes a GraphQL query
-func (c *Client) Query(query string, variables map[string]any) (*GraphQLResponse, error) {
+func (c *Client) Query(query string, variables map[string]any) (*models.GraphQLResponse, error) {
 	// Ensure we have a valid auth token
 	if err := c.authClient.EnsureValidToken(); err != nil {
 		return nil, fmt.Errorf("authentication failed: %w", err)
@@ -49,7 +50,7 @@ func (c *Client) Query(query string, variables map[string]any) (*GraphQLResponse
 	}
 
 	// Parse response
-	var gqlResp GraphQLResponse
+	var gqlResp models.GraphQLResponse // ADD models. prefix
 	if err := json.NewDecoder(resp.Body).Decode(&gqlResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}

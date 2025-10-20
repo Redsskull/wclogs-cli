@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"wclogs-cli/auth"
@@ -12,22 +13,10 @@ type GraphQLRequest struct {
 	Variables map[string]any `json:"variables,omitempty"`
 }
 
-// GraphQLResponse represents a GraphQL API response
-type GraphQLResponse struct {
-	Data   any            `json:"data"`
-	Errors []GraphQLError `json:"errors,omitempty"`
-}
-
-// GraphQLError represents a GraphQL error
-type GraphQLError struct {
-	Message   string                 `json:"message"`
-	Locations []GraphQLErrorLocation `json:"locations,omitempty"`
-	Path      []any                  `json:"path,omitempty"`
-}
-
-type GraphQLErrorLocation struct {
-	Line   int `json:"line"`
-	Column int `json:"column"`
+// QueryVariables represents the variables we pass to GraphQL queries
+type QueryVariables struct {
+	Code    string `json:"code"`    // Report code like "ABC123"
+	FightID int    `json:"fightID"` // Fight ID like 5
 }
 
 // Client handles GraphQL API requests to Warcraft Logs
@@ -44,4 +33,21 @@ func NewClient(authClient *auth.Client) *Client {
 		httpClient: &http.Client{},
 		endpoint:   "https://www.warcraftlogs.com/api/v2/client",
 	}
+}
+
+// ValidateQueryVariables checks if the query variables are valid
+func ValidateQueryVariables(code string, fightID int) error {
+	if code == "" {
+		return fmt.Errorf("report code cannot be empty")
+	}
+
+	if len(code) < 6 {
+		return fmt.Errorf("report code '%s' is too short (must be at least 6 characters)", code)
+	}
+
+	if fightID <= 0 {
+		return fmt.Errorf("fight ID must be greater than 0, got: %d", fightID)
+	}
+
+	return nil
 }
