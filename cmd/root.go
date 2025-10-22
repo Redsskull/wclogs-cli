@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+
+	"wclogs-cli/config"
 )
 
 var rootCmd = &cobra.Command{
@@ -30,6 +33,32 @@ This creates ~/.wclogs.yaml with your API keys.
 For help with a specific command:
   wclogs help damage          # Help for damage command
 `) + "\n",
+	// Check for config before running any command that needs it
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Skip config check for the config command itself and help
+		if cmd.Name() == "config" || cmd.Name() == "help" {
+			return nil
+		}
+
+		// Check if config exists
+		exists, err := config.ConfigExists()
+		if err != nil {
+			return fmt.Errorf("error checking config: %w", err)
+		}
+
+		if !exists {
+			color.HiRed("❌ No configuration found!")
+			color.HiYellow("\n📋 Please set up your Warcraft Logs API credentials first:")
+			color.HiWhite("   wclogs config")
+			color.HiYellow("\nTo get API credentials:")
+			color.HiYellow("   1. Go to https://www.warcraftlogs.com/api/clients")
+			color.HiYellow("   2. Create a new client")
+			color.HiYellow("   3. Run 'wclogs config' with your credentials")
+			return fmt.Errorf("configuration required")
+		}
+
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
@@ -46,6 +75,6 @@ func Execute() {
 func init() {
 	// Global flags that work for all commands
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose output")
-	rootCmd.PersistentFlags().StringP("format", "f", "table", "Output format (table, json, csv)")
+	rootCmd.PersistentFlags().StringP("output", "o", "", "Save output to file (format auto-detected from extension: .csv, .json)")
 	rootCmd.PersistentFlags().IntP("top", "t", 0, "Show top N players (0 = all)")
 }

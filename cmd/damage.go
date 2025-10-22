@@ -2,17 +2,16 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strconv"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"wclogs-cli/api"
 	"wclogs-cli/auth"
-	"wclogs-cli/display"
+	"wclogs-cli/config"
 	"wclogs-cli/models"
+	"wclogs-cli/output"
 )
 
 // damageCmd represents the damage command
@@ -47,8 +46,9 @@ Examples:
 		topN, _ := cmd.Flags().GetInt("top")
 		noColor, _ := cmd.Flags().GetBool("no-color")
 		verbose, _ := cmd.Flags().GetBool("verbose")
+		outputPath, _ := cmd.Flags().GetString("output")
 
-		return showDamageTable(reportCode, fightID, topN, noColor, verbose)
+		return showDamageTable(reportCode, fightID, topN, noColor, verbose, outputPath)
 	},
 }
 
@@ -63,21 +63,23 @@ func init() {
 }
 
 // showDamageTable executes the damage table logic
-func showDamageTable(reportCode string, fightID int, topN int, noColor bool, verbose bool) error {
+func showDamageTable(reportCode string, fightID int, topN int, noColor bool, verbose bool, outputPath string) error {
 	if verbose {
 		color.HiBlue("🔍 Fetching damage data for report %s, fight %d", reportCode, fightID)
 	}
 
-	// Get credentials from environment variables (for now, later we'll use config file)
-	clientID := os.Getenv("WCLOGS_CLIENT_ID")
-	clientSecret := os.Getenv("WCLOGS_CLIENT_SECRET")
-
-	if clientID == "" || clientSecret == "" {
-		return fmt.Errorf(`missing API credentials
-
-Please set up your credentials:
-  using: wclogs config`)
+	// Load credentials from config file (we know it exists thanks to root.go check)
+	if verbose {
+		color.HiBlue("🔐 Loading configuration...")
 	}
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	clientID := cfg.ClientID
+	clientSecret := cfg.ClientSecret
 
 	// Create auth client
 	if verbose {
@@ -142,19 +144,21 @@ Please set up your credentials:
 	// Convert to Player objects
 	players := models.GetPlayersFromTable(tableData)
 
-	// Display the damage table with enhanced styling
-	fmt.Println("\n" + strings.Repeat("=", 60))
-	color.HiCyan("🗡️  WARCRAFT LOGS DAMAGE TABLE")
-	fmt.Printf("📊 Report: %s | ⚔️  Fight: %d | 👥 Players: %d\n", reportCode, fightID, len(players))
-	fmt.Println(strings.Repeat("=", 60))
+	// Calculate total damage
+	var totalDamage int64
+	for _, player := range players {
+		totalDamage += int64(player.Total)
+	}
 
-	// Set up display options
-	options := display.DefaultTableOptions()
-	options.TopN = topN          // Use the --top flag value
-	options.UseColors = !noColor // Disable colors if --no-color is set
+	// Create structured output data
+	outputData := &output.OutputData{
+		Players:    players,
+		ReportCode: reportCode,
+		FightID:    fightID,
+		Title:      "Damage Table",
+		Total:      totalDamage,
+	}
 
-	display.DisplayDamageTable(players, options)
-
-	color.HiGreen("\n🎉 Success! Damage table displayed!")
-	return nil
+	// Handle output (terminal display or file save)
+	return output.HandleOutput(outputData, outputPath, topN, noColor, verbose)
 }

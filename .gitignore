@@ -90,3 +90,6 @@ plan.md
 debug
 debug.test
 .vscode/launch.json
+
+# Saved report files (user data)
+saved_reports/
