@@ -2,44 +2,21 @@
 
 A fast, terminal-based CLI tool that wraps the Warcraft Logs GraphQL API for power users who need scriptable access to combat data without browser overhead.
 
-## 🎯 Project Goals
+## 🎯 Project Status: Days 6 & 7 Complete! ✅
 
-**Learning Objectives:**
-- Master GraphQL integration and query optimization
-- Implement OAuth2 authentication flow
-- Build professional CLI tools with clean UX
-- Demonstrate real-world API integration skills
-
-**Portfolio Value:**
-This project showcases the ability to learn new technologies (GraphQL) and integrate with complex APIs - skills that translate directly to any company's internal systems and data platforms.
+**Current Implementation**: Full player analysis foundation with masterData integration
+**Working Commands**: 5 total (damage, healing, deaths, interrupts, players)
+**Real Data Tested**: ✅ Korean raid reports with 375+ players
+**Player Filtering**: ✅ `--player "Name"` works on all commands
 
 ## 🚀 Features
 
-- **Lightning Fast**: Terminal-based interface for instant data access
-- **Multiple Data Types**: Damage, healing, deaths, interrupts, and more
-- **Flexible Output**: ASCII tables, CSV, or JSON export
-- **Smart Caching**: Respects API rate limits with intelligent caching
-- **Scriptable**: Perfect for automation and data pipeline integration
-- **User-Friendly**: Helpful error messages and intuitive commands
-
-## 🏗️ Architecture
-
-```
-wclogs-cli/
-├── cmd/           # CLI commands (Cobra framework)
-├── api/           # GraphQL API client
-├── auth/          # OAuth2 authentication
-├── display/       # Terminal visualization
-├── models/        # Data structures
-├── config/        # Configuration handling
-└── main.go        # Entry point
-```
-
-**Tech Stack:**
-- **Go**: Core language for performance and CLI tooling
-- **GraphQL**: Modern API integration
-- **Cobra**: Professional CLI framework
-- **OAuth2**: Secure authentication
+✅ **Multiple Data Types**: Damage, healing, deaths, interrupts  
+✅ **Player Analysis**: List all players + filter any command by player name  
+✅ **Smart Display**: Proper column headers (DPS vs HPS), class colors, empty data handling  
+✅ **Export Options**: CSV and JSON export to `saved_reports/` directory  
+✅ **Professional UX**: Color coding, helpful errors, player name validation  
+✅ **Clean Architecture**: Zero file explosion - shared handlers for all commands  
 
 ## 📋 Requirements
 
@@ -49,113 +26,167 @@ wclogs-cli/
 ## ⚡ Quick Start
 
 ```bash
-# Install
-go install github.com/yourusername/wclogs-cli@latest
+# Install dependencies
+go mod tidy
 
 # Configure (interactive setup)
-wclogs config
+go run main.go config
+
+# Show all players in a report
+go run main.go players Hw9TZc2WyrVKJLCa
 
 # Get damage data for a fight
-wclogs damage ABC123 5
+go run main.go damage Hw9TZc2WyrVKJLCa 99
 
-# Export healing data to CSV
-wclogs healing ABC123 5 --format csv --output healing.csv
+# Filter to specific player's healing
+go run main.go healing Hw9TZc2WyrVKJLCa 99 --player "Sketch"
 
-# List all fights in a report
-wclogs list ABC123
+# Export damage data to CSV
+go run main.go damage Hw9TZc2WyrVKJLCa 99 --output damage.csv
 ```
 
-## 🎮 Usage Examples
+## 🎮 Real Working Examples
 
 ```bash
-# Basic damage table
-wclogs damage rMGYbP9QW6KFvD4H 12
+# List all 375 players with classes and servers
+go run main.go players Hw9TZc2WyrVKJLCa
 
-# Top 5 healers with color output
-wclogs healing rMGYbP9QW6KFvD4H 12 --top 5
+# Show top 5 damage dealers
+go run main.go damage Hw9TZc2WyrVKJLCa 99 --top 5
 
-# Deaths for specific player
-wclogs deaths rMGYbP9QW6KFvD4H 12 --player "Xaryu"
+# Focus on specific player's performance
+go run main.go damage Hw9TZc2WyrVKJLCa 99 --player "Pmpm"    # 3.1B damage!
+go run main.go healing Hw9TZc2WyrVKJLCa 99 --player "Sketch" # 3.4B healing!
 
-# Export interrupts as JSON
-wclogs interrupts rMGYbP9QW6KFvD4H 12 --format json
+# Export for spreadsheet analysis
+go run main.go healing Hw9TZc2WyrVKJLCa 99 --output healers.csv
+go run main.go players Hw9TZc2WyrVKJLCa --output players.json
 
-# Pipe to other tools
-wclogs damage ABC123 5 --format csv | head -10
+# Debug mode for API troubleshooting
+go run main.go damage Hw9TZc2WyrVKJLCa 99 --verbose
 ```
 
 ## 🛠️ Commands
 
-| Command | Description | Options |
-|---------|-------------|---------|
-| `config` | Set up API credentials interactively | |
-| `damage <report> <fight>` | Show damage done table | `--top N`, `--player NAME` |
-| `healing <report> <fight>` | Show healing done table | `--top N`, `--player NAME` |
-| `deaths <report> <fight>` | Show death events | `--player NAME` |
-| `interrupts <report> <fight>` | Show interrupt data | `--player NAME` |
-| `list <report>` | List all fights in report | |
+| Command | Status | Description | Options |
+|---------|--------|-------------|---------|
+| `config` | ✅ | Set up API credentials | Interactive setup |
+| `players <report>` | ✅ | List all players in report | `--output FILE` |
+| `damage <report> <fight>` | ✅ | Damage done table | `--top N`, `--player NAME` |
+| `healing <report> <fight>` | ✅ | Healing done table | `--top N`, `--player NAME` |
+| `deaths <report> <fight>` | ⚠️ | Death events (basic) | `--player NAME` |
+| `interrupts <report> <fight>` | ⚠️ | Interrupt data (basic) | `--player NAME` |
 
-**Global Flags:**
-- `--format`: Output format (`table`, `csv`, `json`)
-- `--output`: Save to file instead of stdout
-- `--no-cache`: Force fresh API data
-- `--verbose`: Enable debug output
+**Legend**: ✅ Fully Working | ⚠️ Basic Implementation | ❌ Not Implemented
 
-## ⚙️ Configuration
+**Global Flags**:
+- `--top N`: Show only top N players
+- `--player "Name"`: Filter to specific player (case-insensitive)
+- `--output FILE`: Export to CSV/JSON in `saved_reports/`
+- `--no-color`: Disable colored output
+- `--verbose`: Show detailed API progress
 
-Create `~/.wclogs.yaml`:
+## 🎯 Key Achievements
+
+### ✅ **Player Analysis Foundation**
+```bash
+# masterData GraphQL integration - gets all players with classes/servers
+go run main.go players Hw9TZc2WyrVKJLCa
+# Returns: 375 players with Name, Class, Server, colored by role
+
+# Player filtering with validation and suggestions  
+go run main.go damage Hw9TZc2WyrVKJLCa 99 --player "Pmpm"
+# ✅ Player 'Pmpm' found in report
+# 🎯 Filtered to 1 player(s) matching 'Pmpm'
+# Shows: 3,124,207,218 damage (100.0% of filtered view)
+```
+
+### ✅ **Smart Display System**
+- **Adaptive Headers**: Damage/DPS vs Healing/HPS columns automatically
+- **Class Colors**: Evokers/Shamans show as healers (green), DPS classes (red), etc.
+- **Empty Data Handling**: "No deaths found (great job!)" instead of confusing empty tables
+- **Percentage Calculations**: Proper % calculations, no more NaN% bugs
+
+### ✅ **Professional Architecture**  
+- **Zero File Explosion**: All commands use shared `executeTableCommand()` handler
+- **Generic Display**: `DisplayTable()` adapts to damage/healing/deaths/interrupts  
+- **Clean Error Messages**: Player name suggestions when typos occur
+- **Modern Go**: Using `max()` function, clean struct definitions
+
+## ⚠️ **Known Limitations**
+
+### **Deaths & Interrupts Need Events API**
+```bash
+# These work but show limited data:
+go run main.go deaths Hw9TZc2WyrVKJLCa 99    # Shows "No deaths found" 
+go run main.go interrupts Hw9TZc2WyrVKJLCa 99 # Shows "No interrupts found"
+
+# Reason: Table API doesn't provide detailed event data
+# Solution: Needs Events API integration (planned for Week 2)
+```
+
+**What's Missing:**
+- **Deaths**: Should show what killed player, damage taken timeline
+- **Interrupts**: Should show successful vs missed, interrupt targets
+- **Root Cause**: Using `table` dataType instead of `events` API
+
+### **Current Workarounds:**
+- Deaths/Interrupts have basic table structure but may show empty data
+- Use damage/healing commands for reliable analysis
+- Player filtering works on all commands
+
+## 🚀 **Future Work (Week 2)**
+
+```bash
+# Planned improvements:
+wclogs death-analysis ABC123 5 --player "Name"  # What killed them + timeline
+wclogs interrupts ABC123 5                      # Success rate, missed opportunities  
+wclogs player-damage ABC123 5 "Name"            # Ability breakdown
+wclogs timeline ABC123 5                        # Fight event timeline
+```
+
+## ⚙️ **Configuration**
+
+Interactive setup (recommended):
+```bash
+go run main.go config
+# Prompts for API credentials from https://www.warcraftlogs.com/api/clients
+```
+
+Manual setup - Create `~/.wclogs.yaml`:
 ```yaml
 client_id: your_warcraft_logs_client_id
 client_secret: your_warcraft_logs_client_secret
 ```
 
-Or use the interactive setup:
-```bash
-wclogs config
-```
+## 🎯 **Proven Capabilities**
 
-## 🎯 Target Users
+This project demonstrates:
 
-**Raid Leaders**: Quick damage/healing summaries between pulls without alt-tabbing
-**Theorycrafters**: Export data for spreadsheet analysis and performance tracking
-**Guild Officers**: Generate reports for raid performance discussions
-**Developers**: Integrate Warcraft Logs data into custom tools and dashboards
+✅ **GraphQL Mastery**: Complex nested queries, masterData + table integration  
+✅ **OAuth2 Implementation**: Client credentials flow with token management  
+✅ **API Integration**: Real-world data from 375+ player Korean raids  
+✅ **CLI Design**: Cobra framework, shared handlers, zero code duplication  
+✅ **Data Processing**: Player name→ID mapping, filtering, validation  
+✅ **User Experience**: Color coding, helpful errors, professional formatting  
 
-## 🔧 Development Status
+## 📊 **Real Performance Data**
 
-**Current Phase**: Week 1 - Core Functionality (Oct 18-24, 2025)
-- ✅ Project scaffolding and planning
-- 🔄 OAuth2 authentication implementation
-- ⏳ GraphQL query engine
-- ⏳ Terminal display system
+**Tested With:**
+- **Report**: Hw9TZc2WyrVKJLCa (Korean server raid)
+- **Players**: 375 total participants  
+- **Fight 99 Highlights**:
+  - Pmpm (Mage): 3.1B damage, 7.4M DPS
+  - Sketch (Evoker): 3.4B healing, 6.3M HPS
+  - 19 healers, 15.5B total healing
 
-**Planned Features**:
-- Advanced filtering and sorting options
-- Batch processing for multiple reports
-- Plugin system for custom data types
-- Performance analytics and insights
-
-## 🤝 Contributing
-
-This is primarily a learning project, but suggestions and feedback are welcome! Feel free to:
-- Open issues for bugs or feature requests
-- Submit PRs for improvements
-- Share usage examples or tips
-
-## 📈 Why This Project Matters
-
-In today's data-driven development landscape, the ability to quickly integrate with GraphQL APIs and build user-friendly CLI tools is essential. This project demonstrates:
-
-- **Rapid Technology Adoption**: Learning GraphQL from zero to production in 2 weeks
-- **Real-World Problem Solving**: Addressing actual pain points for gaming communities
-- **Professional Development Practices**: Clean code, documentation, testing, and user experience focus
-- **API Integration Expertise**: Skills that transfer to any company's internal systems
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
+**Architecture Handles:**
+- Large player datasets (375+ players)
+- Korean character encoding  
+- Multiple data types simultaneously
+- Case-insensitive player matching
 
 ---
 
-*Built with ❤️ as part of a structured learning journey toward professional software development.*
-*"Building tomorrow's positronic brains, one CLI at a time." - Developer Learning Roadmap 2025*
+*Days 6 & 7 Complete! ✅ Player analysis foundation fully implemented.*  
+*Next: Events API integration for detailed death/interrupt analysis.*

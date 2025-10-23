@@ -220,3 +220,103 @@ func formatNumber(n int64) string {
 	}
 	return result
 }
+
+// PlayersOutputData represents player list output data
+type PlayersOutputData struct {
+	Players    []*models.PlayerInfo `json:"players"`
+	ReportCode string               `json:"report_code"`
+	Count      int                  `json:"player_count"`
+}
+
+// HandlePlayersOutput processes the players list output
+func HandlePlayersOutput(data *PlayersOutputData, outputPath string, verbose bool) error {
+	// Determine format from file extension
+	format := detectFormat(outputPath)
+	if format == "" {
+		return fmt.Errorf("unsupported file format. Use .csv or .json extension")
+	}
+
+	// Create saved_reports directory if it doesn't exist
+	reportsDir := "saved_reports"
+	if err := os.MkdirAll(reportsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create reports directory: %w", err)
+	}
+
+	// Prepend the saved_reports directory to the output path
+	fullPath := filepath.Join(reportsDir, outputPath)
+
+	if verbose {
+		color.HiBlue("💾 Saving players to file: %s (format: %s)", fullPath, format)
+	}
+
+	// Save to file
+	if err := savePlayersToFile(data, fullPath, format); err != nil {
+		return fmt.Errorf("failed to save file: %w", err)
+	}
+
+	// Show success message
+	color.HiGreen("✅ Players list saved to: %s", fullPath)
+	color.HiCyan("👥 %d players saved", data.Count)
+
+	return nil
+}
+
+// savePlayersToFile writes players data to file in specified format
+func savePlayersToFile(data *PlayersOutputData, filename string, format string) error {
+	switch format {
+	case "csv":
+		return savePlayersCSV(data, filename)
+	case "json":
+		return savePlayersJSON(data, filename)
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// savePlayersCSV writes players data as CSV
+func savePlayersCSV(data *PlayersOutputData, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Header
+	if err := writer.Write([]string{
+		"Player ID", "Player Name", "Class", "Server", "Report Code",
+	}); err != nil {
+		return err
+	}
+
+	// Data rows
+	for _, player := range data.Players {
+		record := []string{
+			fmt.Sprintf("%d", player.ID),
+			player.Name,
+			player.Class,
+			player.Server,
+			data.ReportCode,
+		}
+		if err := writer.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// savePlayersJSON writes players data as JSON
+func savePlayersJSON(data *PlayersOutputData, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ") // Pretty print
+	return encoder.Encode(data)
+}

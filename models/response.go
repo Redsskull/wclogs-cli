@@ -35,12 +35,28 @@ type ReportData struct {
 
 // Report represents a single Warcraft Logs report
 type Report struct {
-	Code      string          `json:"code,omitempty"`      // Report code like "ABC123"
-	Title     string          `json:"title,omitempty"`     // Report title
-	StartTime int64           `json:"startTime,omitempty"` // Unix timestamp
-	EndTime   int64           `json:"endTime,omitempty"`   // Unix timestamp
-	Fights    []Fight         `json:"fights,omitempty"`    // All fights in this report
-	Table     json.RawMessage `json:"table,omitempty"`     // Table data for this report
+	Code       string          `json:"code,omitempty"`       // Report code like "ABC123"
+	Title      string          `json:"title,omitempty"`      // Report title
+	StartTime  int64           `json:"startTime,omitempty"`  // Unix timestamp
+	EndTime    int64           `json:"endTime,omitempty"`    // Unix timestamp
+	Fights     []Fight         `json:"fights,omitempty"`     // All fights in this report
+	Table      json.RawMessage `json:"table,omitempty"`      // Table data for this report
+	MasterData *MasterData     `json:"masterData,omitempty"` // Report metadata including players
+}
+
+// MasterData represents the masterData field containing report metadata
+type MasterData struct {
+	Actors []Actor `json:"actors,omitempty"` // All actors (players) in the report
+}
+
+// Actor represents a player in the report
+type Actor struct {
+	ID      int    `json:"id"`      // Player ID used in other queries
+	Name    string `json:"name"`    // Player name
+	Type    string `json:"type"`    // Actor type (usually "Player")
+	SubType string `json:"subType"` // Player class (like "Paladin", "Warrior")
+	Server  string `json:"server"`  // Server name
+	Icon    string `json:"icon"`    // Class icon identifier
 }
 
 // Fight represents a single encounter/fight within a report

@@ -13,7 +13,7 @@ import (
 // TableOptions configures how the table is displayed
 type TableOptions struct {
 	TopN      int  // Show only top N players (0 = show all)
-	ShowDPS   bool // Show DPS column
+	ShowRate  bool // Show rate column (DPS/HPS/etc.)
 	ShowClass bool // Show class column
 	UseColors bool // Enable color coding by class role
 }
@@ -22,53 +22,127 @@ type TableOptions struct {
 func DefaultTableOptions() TableOptions {
 	return TableOptions{
 		TopN:      10,   // Show top 10 by default
-		ShowDPS:   true, // Show DPS by default
+		ShowRate:  true, // Show rate by default (DPS/HPS/etc.)
 		ShowClass: true, // Show class by default
 		UseColors: true, // Enable colors by default
 	}
 }
 
+// DataTypeInfo contains display information for different data types
+type DataTypeInfo struct {
+	ValueLabel string // "Damage", "Healing", "Deaths", etc.
+	RateLabel  string // "DPS", "HPS", "Death Rate", etc.
+	TotalLabel string // "Total Damage", "Total Healing", etc.
+}
+
+// getDataTypeInfo returns display info for the given data type
+func getDataTypeInfo(dataType string) DataTypeInfo {
+	switch strings.ToLower(dataType) {
+	case "damage":
+		return DataTypeInfo{
+			ValueLabel: "Damage",
+			RateLabel:  "DPS",
+			TotalLabel: "Total Damage",
+		}
+	case "healing":
+		return DataTypeInfo{
+			ValueLabel: "Healing",
+			RateLabel:  "HPS",
+			TotalLabel: "Total Healing",
+		}
+	case "deaths":
+		return DataTypeInfo{
+			ValueLabel: "Deaths",
+			RateLabel:  "Deaths/Min",
+			TotalLabel: "Total Deaths",
+		}
+	case "interrupts":
+		return DataTypeInfo{
+			ValueLabel: "Interrupts",
+			RateLabel:  "Int/Min",
+			TotalLabel: "Total Interrupts",
+		}
+	default:
+		return DataTypeInfo{
+			ValueLabel: "Value",
+			RateLabel:  "Rate",
+			TotalLabel: "Total",
+		}
+	}
+}
+
 // getClassColor returns the appropriate color for a class based on role
 func getClassColor(class string) *color.Color {
-	// DPS classes - Bright Red with Background
+	// DPS classes - Bright Red
 	dpsClasses := map[string]bool{
 		"Mage": true, "Warlock": true, "Hunter": true, "Rogue": true,
-		"DeathKnight": true, "DemonHunter": true, "Evoker": true,
-		"Monk": true, "Shaman": true, // Assuming DPS specs
+		"DeathKnight": true, "DemonHunter": true, "Warrior": true,
+		"Monk": true, // Can be DPS or healer, but often DPS
 	}
 
-	// Healer classes - Bright Green with Background
+	// Healer classes - Bright Green
 	healerClasses := map[string]bool{
-		"Priest": true, "Druid": true, "Paladin": true,
-	}
-
-	// Tank classes - Bright Blue with Background (though many can DPS too)
-	tankClasses := map[string]bool{
-		"Warrior": true,
+		"Priest": true, "Druid": true, "Paladin": true, "Shaman": true,
+		"Evoker": true, // Evokers are primarily healers
 	}
 
 	if dpsClasses[class] {
-		return color.New(color.FgHiRed, color.Bold, color.BgHiBlack)
+		return color.New(color.FgHiRed, color.Bold)
 	} else if healerClasses[class] {
-		return color.New(color.FgHiGreen, color.Bold, color.BgHiBlack)
-	} else if tankClasses[class] {
-		return color.New(color.FgHiBlue, color.Bold, color.BgHiBlack)
+		return color.New(color.FgHiGreen, color.Bold)
 	}
 
 	// Default color for unknown classes - Bright Yellow
 	return color.New(color.FgHiYellow, color.Bold)
 }
 
-// DisplayDamageTable displays a formatted damage table
-func DisplayDamageTable(players []*models.Player, options TableOptions) {
+// filterMeaningfulPlayers removes players with no relevant data for certain data types
+func filterMeaningfulPlayers(players []*models.Player, dataType string) []*models.Player {
+	switch strings.ToLower(dataType) {
+	case "deaths", "interrupts":
+		// Only show players who actually have deaths/interrupts
+		var filtered []*models.Player
+		for _, player := range players {
+			if player.Total > 0 {
+				filtered = append(filtered, player)
+			}
+		}
+		return filtered
+	default:
+		// For damage/healing, show all players (even 0 values can be meaningful)
+		return players
+	}
+}
+
+// DisplayTable displays a formatted table for any data type (replaces DisplayDamageTable)
+func DisplayTable(players []*models.Player, dataType string, options TableOptions) {
 	if len(players) == 0 {
 		fmt.Println("No player data found.")
 		return
 	}
 
-	// Sort players by total damage (descending)
-	sortedPlayers := make([]*models.Player, len(players))
-	copy(sortedPlayers, players)
+	// Get display info for this data type
+	typeInfo := getDataTypeInfo(dataType)
+
+	// Filter out players with no meaningful data for certain data types
+	filteredPlayers := filterMeaningfulPlayers(players, dataType)
+
+	if len(filteredPlayers) == 0 {
+		fmt.Printf("ℹ️  No %s data found for this fight.\n", strings.ToLower(typeInfo.ValueLabel))
+		fmt.Printf("This could mean:\n")
+		switch strings.ToLower(dataType) {
+		case "deaths":
+			fmt.Printf("  • No players died (great job!)\n")
+		case "interrupts":
+			fmt.Printf("  • No interrupts were performed\n")
+			fmt.Printf("  • This fight may not require interrupts\n")
+		}
+		return
+	}
+
+	// Sort players by total (descending)
+	sortedPlayers := make([]*models.Player, len(filteredPlayers))
+	copy(sortedPlayers, filteredPlayers)
 	sort.Slice(sortedPlayers, func(i, j int) bool {
 		return sortedPlayers[i].Total > sortedPlayers[j].Total
 	})
@@ -78,52 +152,49 @@ func DisplayDamageTable(players []*models.Player, options TableOptions) {
 		sortedPlayers = sortedPlayers[:options.TopN]
 	}
 
-	// Calculate column widths
-	nameWidth := calculateMaxWidth(sortedPlayers, func(p *models.Player) string { return p.Name })
-	if nameWidth < 12 { // Minimum width for "Player Name"
-		nameWidth = 12
-	}
+	// Calculate column widths using modernized max()
+	nameWidth := max(calculateMaxWidth(sortedPlayers, func(p *models.Player) string { return p.Name }), 12)
 
 	classWidth := 0
 	if options.ShowClass {
-		classWidth = calculateMaxWidth(sortedPlayers, func(p *models.Player) string { return p.Class })
-		if classWidth < 8 { // Minimum width for "Class"
-			classWidth = 8
-		}
+		classWidth = max(calculateMaxWidth(sortedPlayers, func(p *models.Player) string { return p.Class }), 8)
 	}
 
-	damageWidth := calculateMaxWidth(sortedPlayers, func(p *models.Player) string { return p.FormatTotal() })
-	if damageWidth < 10 { // Minimum width for "Damage"
-		damageWidth = 10
-	}
+	valueWidth := max(
+		calculateMaxWidth(sortedPlayers, func(p *models.Player) string { return p.FormatTotal() }),
+		len(typeInfo.ValueLabel),
+	)
 
-	dpsWidth := 0
-	if options.ShowDPS {
-		dpsWidth = calculateMaxWidth(sortedPlayers, func(p *models.Player) string { return p.FormatDPS() })
-		if dpsWidth < 8 { // Minimum width for "DPS"
-			dpsWidth = 8
-		}
+	rateWidth := 0
+	if options.ShowRate {
+		rateWidth = max(
+			calculateMaxWidth(sortedPlayers, func(p *models.Player) string { return p.FormatDPS() }),
+			len(typeInfo.RateLabel),
+		)
 	}
 
 	percentWidth := 8 // "% Total"
 
 	// Print header
 	fmt.Println()
-	printHeader(nameWidth, classWidth, damageWidth, dpsWidth, percentWidth, options)
-	printSeparator(nameWidth, classWidth, damageWidth, dpsWidth, percentWidth, options)
+	printGenericHeader(nameWidth, classWidth, valueWidth, rateWidth, percentWidth, typeInfo, options)
+	printSeparator(nameWidth, classWidth, valueWidth, rateWidth, percentWidth, options)
 
-	// Calculate total damage for percentage calculation
-	totalDamage := calculateTotalDamage(sortedPlayers)
+	// Calculate total for percentage calculation
+	totalValue := calculateTotal(sortedPlayers)
 
 	// Print data rows
 	for _, player := range sortedPlayers {
-		percentage := (player.Total / totalDamage) * 100
-		printDataRow(player, percentage, nameWidth, classWidth, damageWidth, dpsWidth, percentWidth, options)
+		percentage := 0.0
+		if totalValue > 0 {
+			percentage = (player.Total / totalValue) * 100
+		}
+		printGenericDataRow(player, percentage, nameWidth, classWidth, valueWidth, rateWidth, percentWidth, options)
 	}
 
 	// Print separator and summary
-	printSeparator(nameWidth, classWidth, damageWidth, dpsWidth, percentWidth, options)
-	printSummary(len(players), len(sortedPlayers), totalDamage, options)
+	printSeparator(nameWidth, classWidth, valueWidth, rateWidth, percentWidth, options)
+	printGenericSummary(len(filteredPlayers), len(sortedPlayers), totalValue, typeInfo, options)
 	fmt.Println()
 }
 
@@ -131,26 +202,23 @@ func DisplayDamageTable(players []*models.Player, options TableOptions) {
 func calculateMaxWidth(players []*models.Player, getter func(*models.Player) string) int {
 	maxWidth := 0
 	for _, player := range players {
-		width := len(getter(player))
-		if width > maxWidth {
-			maxWidth = width
-		}
+		maxWidth = max(maxWidth, len(getter(player)))
 	}
 	return maxWidth
 }
 
-// printHeader prints the table header
-func printHeader(nameWidth, classWidth, damageWidth, dpsWidth, percentWidth int, options TableOptions) {
+// printGenericHeader prints the table header based on data type
+func printGenericHeader(nameWidth, classWidth, valueWidth, rateWidth, percentWidth int, typeInfo DataTypeInfo, options TableOptions) {
 	fmt.Printf("%-*s", nameWidth, "Player Name")
 
 	if options.ShowClass {
 		fmt.Printf("  %-*s", classWidth, "Class")
 	}
 
-	fmt.Printf("  %*s", damageWidth, "Damage")
+	fmt.Printf("  %*s", valueWidth, typeInfo.ValueLabel)
 
-	if options.ShowDPS {
-		fmt.Printf("  %*s", dpsWidth, "DPS")
+	if options.ShowRate {
+		fmt.Printf("  %*s", rateWidth, typeInfo.RateLabel)
 	}
 
 	fmt.Printf("  %*s", percentWidth, "% Total")
@@ -158,17 +226,17 @@ func printHeader(nameWidth, classWidth, damageWidth, dpsWidth, percentWidth int,
 }
 
 // printSeparator prints a separator line
-func printSeparator(nameWidth, classWidth, damageWidth, dpsWidth, percentWidth int, options TableOptions) {
+func printSeparator(nameWidth, classWidth, valueWidth, rateWidth, percentWidth int, options TableOptions) {
 	totalWidth := nameWidth
 
 	if options.ShowClass {
 		totalWidth += 2 + classWidth
 	}
 
-	totalWidth += 2 + damageWidth
+	totalWidth += 2 + valueWidth
 
-	if options.ShowDPS {
-		totalWidth += 2 + dpsWidth
+	if options.ShowRate {
+		totalWidth += 2 + rateWidth
 	}
 
 	totalWidth += 2 + percentWidth
@@ -176,8 +244,8 @@ func printSeparator(nameWidth, classWidth, damageWidth, dpsWidth, percentWidth i
 	fmt.Println(strings.Repeat("=", totalWidth))
 }
 
-// printDataRow prints a single data row with optional color coding
-func printDataRow(player *models.Player, percentage float64, nameWidth, classWidth, damageWidth, dpsWidth, percentWidth int, options TableOptions) {
+// printGenericDataRow prints a single data row with optional color coding
+func printGenericDataRow(player *models.Player, percentage float64, nameWidth, classWidth, valueWidth, rateWidth, percentWidth int, options TableOptions) {
 	if options.UseColors {
 		classColor := getClassColor(player.Class)
 
@@ -189,26 +257,26 @@ func printDataRow(player *models.Player, percentage float64, nameWidth, classWid
 			classColor.Printf("%-*s", classWidth, player.Class)
 		}
 
-		// Print damage and DPS in normal color
-		fmt.Printf("  %*s", damageWidth, player.FormatTotal())
+		// Print value and rate in normal color
+		fmt.Printf("  %*s", valueWidth, player.FormatTotal())
 
-		if options.ShowDPS {
-			fmt.Printf("  %*s", dpsWidth, player.FormatDPS())
+		if options.ShowRate {
+			fmt.Printf("  %*s", rateWidth, player.FormatDPS())
 		}
 
 		fmt.Printf("  %*.1f%%", percentWidth-1, percentage)
 	} else {
-		// Original non-colored output
+		// Non-colored output
 		fmt.Printf("%-*s", nameWidth, player.Name)
 
 		if options.ShowClass {
 			fmt.Printf("  %-*s", classWidth, player.Class)
 		}
 
-		fmt.Printf("  %*s", damageWidth, player.FormatTotal())
+		fmt.Printf("  %*s", valueWidth, player.FormatTotal())
 
-		if options.ShowDPS {
-			fmt.Printf("  %*s", dpsWidth, player.FormatDPS())
+		if options.ShowRate {
+			fmt.Printf("  %*s", rateWidth, player.FormatDPS())
 		}
 
 		fmt.Printf("  %*.1f%%", percentWidth-1, percentage)
@@ -216,8 +284,8 @@ func printDataRow(player *models.Player, percentage float64, nameWidth, classWid
 	fmt.Println()
 }
 
-// calculateTotalDamage calculates the sum of all damage
-func calculateTotalDamage(players []*models.Player) float64 {
+// calculateTotal calculates the sum of all values
+func calculateTotal(players []*models.Player) float64 {
 	total := 0.0
 	for _, player := range players {
 		total += player.Total
@@ -225,11 +293,8 @@ func calculateTotalDamage(players []*models.Player) float64 {
 	return total
 }
 
-// printSummary prints summary information with a total damage row
-func printSummary(totalPlayers, shownPlayers int, totalDamage float64, options TableOptions) {
-	// Print a total row separator
-	fmt.Println()
-
+// printGenericSummary prints summary information
+func printGenericSummary(totalPlayers, shownPlayers int, totalValue float64, typeInfo DataTypeInfo, options TableOptions) {
 	// Summary statistics in bold yellow
 	summaryColor := color.New(color.FgYellow, color.Bold)
 
@@ -239,18 +304,16 @@ func printSummary(totalPlayers, shownPlayers int, totalDamage float64, options T
 		summaryColor.Printf("📊 Showing all %d players", totalPlayers)
 	}
 
-	summaryColor.Printf(" | Total Damage: %s", models.FormatNumber(int64(totalDamage)))
+	summaryColor.Printf(" | %s: %s", typeInfo.TotalLabel, models.FormatNumber(int64(totalValue)))
 	fmt.Println()
 
 	// Add a legend for colors
 	if options.UseColors {
 		fmt.Println()
 		fmt.Print("🎨 Color Legend: ")
-		color.New(color.FgHiRed, color.Bold, color.BgHiBlack).Print(" DPS ")
+		color.New(color.FgHiRed, color.Bold).Print(" DPS ")
 		fmt.Print(" | ")
-		color.New(color.FgHiGreen, color.Bold, color.BgHiBlack).Print(" Healers ")
-		fmt.Print(" | ")
-		color.New(color.FgHiBlue, color.Bold, color.BgHiBlack).Print(" Tanks ")
+		color.New(color.FgHiGreen, color.Bold).Print(" Healers ")
 		fmt.Print(" | ")
 		color.New(color.FgHiYellow, color.Bold).Print(" Unknown ")
 		fmt.Println()

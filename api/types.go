@@ -51,3 +51,13 @@ func ValidateQueryVariables(code string, fightID int) error {
 
 	return nil
 }
+
+// DataType represents the different types of combat data we can fetch
+type DataType string
+
+const (
+	DataTypeDamage     DataType = "DamageDone"
+	DataTypeHealing    DataType = "Healing"
+	DataTypeDeaths     DataType = "Deaths"
+	DataTypeInterrupts DataType = "Interrupts"
+)

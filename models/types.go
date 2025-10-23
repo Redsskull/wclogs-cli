@@ -59,3 +59,41 @@ func (r *GraphQLResponse) FirstError() string {
 	}
 	return ""
 }
+
+// Player represents a simplified view of player data for display purposes
+// This is derived from PlayerEntry but with a cleaner interface
+type Player struct {
+	Name      string  `json:"name"`
+	Class     string  `json:"class"`
+	Total     float64 `json:"total"`
+	Icon      string  `json:"icon"`
+	ItemLevel int     `json:"itemLevel"`
+	DPS       float64 `json:"dps"`
+}
+
+// PlayerInfo represents a player with their basic information (NEW for Day 6)
+type PlayerInfo struct {
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	Class  string `json:"class"`
+	Server string `json:"server"`
+	Icon   string `json:"icon"`
+}
+
+// PlayerLookup provides player name → ID mapping functionality (NEW for Day 6)
+type PlayerLookup struct {
+	playersByName map[string]*PlayerInfo // Name → PlayerInfo mapping
+	playersByID   map[int]*PlayerInfo    // ID → PlayerInfo mapping
+}
+
+// NewPlayerFromEntry creates a Player from a PlayerEntry (ORIGINAL - KEEP)
+func NewPlayerFromEntry(entry *PlayerEntry) *Player {
+	return &Player{
+		Name:      entry.Name,
+		Class:     entry.Type,
+		Total:     entry.Total,
+		Icon:      entry.Icon,
+		ItemLevel: entry.ItemLevel,
+		DPS:       entry.DPS(),
+	}
+}
