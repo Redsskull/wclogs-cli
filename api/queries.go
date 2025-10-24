@@ -204,21 +204,6 @@ const (
 				}
 			}
 		}`
-
-	// TestEventsQuery is a simple query to test the Events API structure
-	TestEventsQuery = `
-		query TestEvents($code: String!, $fightID: Int!) {
-			reportData {
-				report(code: $code) {
-					events(
-						fightIDs: [$fightID],
-						limit: 10
-					) {
-						data
-					}
-				}
-			}
-		}`
 )
 
 // NewTableRequest creates a generic GraphQL request for any table data type
@@ -339,17 +324,6 @@ func NewDefensiveAbilitiesRequest(code string, fightID int, playerID int, startT
 			"playerID":  playerID,
 			"startTime": startTime,
 			"endTime":   endTime,
-		},
-	}
-}
-
-// NewTestEventsRequest creates a simple test query for the Events API
-func NewTestEventsRequest(code string, fightID int) *GraphQLRequest {
-	return &GraphQLRequest{
-		Query: TestEventsQuery,
-		Variables: map[string]any{
-			"code":    code,
-			"fightID": fightID,
 		},
 	}
 }

@@ -23,8 +23,7 @@ Fast, scriptable access to combat log data without browser overhead.
 Examples:
   wclogs damage ABC123 5      # Show damage table for fight 5
   wclogs healing ABC123 5     # Show healing table
-  wclogs deaths ABC123 5      # Show death events
-  wclogs interrupts ABC123 5  # Show interrupt events
+  wclogs deaths ABC123 5      # Show death analysis
 
 Get started by setting up your API credentials:
   wclogs config               # Interactive credential setup

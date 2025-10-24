@@ -2,21 +2,34 @@
 
 A fast, terminal-based CLI tool that wraps the Warcraft Logs GraphQL API for power users who need scriptable access to combat data without browser overhead.
 
-## 🎯 Project Status: Days 6 & 7 Complete! ✅
+## 🎯 Project Status: Day 9 Complete! ✅
 
-**Current Implementation**: Full player analysis foundation with masterData integration
-**Working Commands**: 5 total (damage, healing, deaths, interrupts, players)
-**Real Data Tested**: ✅ Korean raid reports with 375+ players
-**Player Filtering**: ✅ `--player "Name"` works on all commands
+**Current Implementation**: Production-ready death analysis with Events API integration
+**Working Commands**: 3 core commands (damage, healing, deaths) with advanced analysis
+**Major Breakthrough**: Real ability names and detailed death timelines
+**Events API Mastery**: 5-second damage timeline showing exact combat events
 
 ## 🚀 Features
 
-✅ **Multiple Data Types**: Damage, healing, deaths, interrupts  
-✅ **Player Analysis**: List all players + filter any command by player name  
-✅ **Smart Display**: Proper column headers (DPS vs HPS), class colors, empty data handling  
-✅ **Export Options**: CSV and JSON export to `saved_reports/` directory  
-✅ **Professional UX**: Color coding, helpful errors, player name validation  
-✅ **Clean Architecture**: Zero file explosion - shared handlers for all commands  
+### ✅ **Core Table Commands**
+- **Damage/Healing Tables**: Professional display with DPS/HPS calculations
+- **Player Filtering**: `--player "Name"` for focused analysis  
+- **Export Options**: CSV and JSON export to `saved_reports/` directory
+- **Smart Display**: Class colors, percentage calculations, top N filtering
+
+### ✅ **Advanced Death Analysis** (Events API)
+- **Production-Ready**: Real ability names ("Crystalline Shockwave from Fractillus")
+- **Damage Timeline**: Shows exact damage sources in 5-second death window
+- **Two-Mode System**: Summary for overview, detailed for specific player analysis
+- **Friendly Fire Detection**: Reveals damage from other players vs boss
+- **Healing Context**: Shows healing attempts with "healers tried hard!" insights
+- **Smart Caching**: Ability name lookup with performance optimization
+
+### ✅ **Technical Achievements**
+- **Events API Integration**: Complex JSON parsing and event timeline analysis
+- **GameData API**: Ability name resolution and actor lookup
+- **GraphQL Mastery**: Multiple API endpoints, nested queries, error handling
+- **Clean Architecture**: Services layer with lookup caching and shared handlers
 
 ## 📋 Requirements
 
@@ -32,52 +45,64 @@ go mod tidy
 # Configure (interactive setup)
 go run main.go config
 
-# Show all players in a report
-go run main.go players Hw9TZc2WyrVKJLCa
+# Get damage/healing tables
+go run main.go damage 6qNJmgYBTcyfvpWF 3 --top 5
+go run main.go healing 6qNJmgYBTcyfvpWF 3 --player "Hanahime"
 
-# Get damage data for a fight
-go run main.go damage Hw9TZc2WyrVKJLCa 99
+# Advanced death analysis (NEW!)
+go run main.go deaths 6qNJmgYBTcyfvpWF 3                    # Summary mode
+go run main.go deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp" # Detailed analysis
 
-# Filter to specific player's healing
-go run main.go healing Hw9TZc2WyrVKJLCa 99 --player "Sketch"
-
-# Export damage data to CSV
-go run main.go damage Hw9TZc2WyrVKJLCa 99 --output damage.csv
+# Export data
+go run main.go damage 6qNJmgYBTcyfvpWF 3 --output damage.csv
 ```
 
 ## 🎮 Real Working Examples
 
+### Basic Table Analysis
 ```bash
-# List all 375 players with classes and servers
-go run main.go players Hw9TZc2WyrVKJLCa
+# Top damage dealers
+go run main.go damage 6qNJmgYBTcyfvpWF 3 --top 5
 
-# Show top 5 damage dealers
-go run main.go damage Hw9TZc2WyrVKJLCa 99 --top 5
-
-# Focus on specific player's performance
-go run main.go damage Hw9TZc2WyrVKJLCa 99 --player "Pmpm"    # 3.1B damage!
-go run main.go healing Hw9TZc2WyrVKJLCa 99 --player "Sketch" # 3.4B healing!
+# Specific player performance
+go run main.go healing 6qNJmgYBTcyfvpWF 3 --player "Hanahime"  # 1.67B healing!
 
 # Export for spreadsheet analysis
-go run main.go healing Hw9TZc2WyrVKJLCa 99 --output healers.csv
-go run main.go players Hw9TZc2WyrVKJLCa --output players.json
+go run main.go damage 6qNJmgYBTcyfvpWF 3 --output damage.csv
+```
 
-# Debug mode for API troubleshooting
-go run main.go damage Hw9TZc2WyrVKJLCa 99 --verbose
+### Advanced Death Analysis (NEW!)
+```bash
+# Fight overview - who died and when
+go run main.go deaths 6qNJmgYBTcyfvpWF 3
+
+# Detailed player death investigation  
+go run main.go deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp" --verbose
+
+# Shows: "Killed by Crystalline Shockwave from Fractillus"
+# Shows: 18.8M damage in 5 seconds with exact sources and amounts
+# Shows: Healing attempts and defensive ability usage
 ```
 
 ## 🛠️ Commands
 
-| Command | Status | Description | Options |
-|---------|--------|-------------|---------|
-| `config` | ✅ | Set up API credentials | Interactive setup |
-| `players <report>` | ✅ | List all players in report | `--output FILE` |
-| `damage <report> <fight>` | ✅ | Damage done table | `--top N`, `--player NAME` |
-| `healing <report> <fight>` | ✅ | Healing done table | `--top N`, `--player NAME` |
-| `deaths <report> <fight>` | ⚠️ | Death events (basic) | `--player NAME` |
-| `interrupts <report> <fight>` | ⚠️ | Interrupt data (basic) | `--player NAME` |
+| Command | Status | Description | Key Features |
+|---------|--------|-------------|--------------|
+| `config` | ✅ | Set up API credentials | Interactive OAuth2 setup |
+| `damage <report> <fight>` | ✅ | Damage table with DPS | Player filtering, top N, export |
+| `healing <report> <fight>` | ✅ | Healing table with HPS | Player filtering, top N, export |
+| `deaths <report> <fight>` | ✅ | **Advanced death analysis** | Real ability names, damage timeline, Events API |
+| `interrupts <report> <fight>` | ❌ | Interrupt analysis | Coming in Day 11 |
+| `players <report>` | ❌ | List all players | Coming in Day 11 |
 
-**Legend**: ✅ Fully Working | ⚠️ Basic Implementation | ❌ Not Implemented
+**Legend**: ✅ Production Ready | ❌ Not Yet Implemented
+
+### Deaths Command (Advanced Features)
+- ✅ **Real ability names**: "Crystalline Shockwave from Fractillus" 
+- ✅ **Damage timeline**: Shows 12-18M damage in 5-second death window
+- ✅ **Two modes**: Summary (all deaths) vs Detailed (--player specific)
+- ✅ **Friendly fire detection**: Reveals damage from other players
+- ✅ **Healing analysis**: Shows healing attempts with context
 
 **Global Flags**:
 - `--top N`: Show only top N players

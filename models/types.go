@@ -183,14 +183,3 @@ type InterruptAnalysis struct {
 	InterruptSuccess     float64
 	InterruptDetails     []*InterruptEvent
 }
-
-// DeathAnalysis represents death analysis for a player
-type DeathAnalysis struct {
-	PlayerID               int
-	PlayerName             string
-	Deaths                 []*DeathEvent
-	TotalDeaths            int
-	AverageSurvivalTime    time.Duration
-	AverageDamagePerSecond float64
-	TopCausesOfDeath       []string
-}
