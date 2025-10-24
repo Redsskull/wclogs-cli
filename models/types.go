@@ -114,6 +114,10 @@ type Event struct {
 	Overkill  *int    `json:"overkill"`
 	Tick      *bool   `json:"tick"`
 
+	// Death-specific fields
+	KillerID             *int `json:"killerID"`
+	KillingAbilityGameID *int `json:"killingAbilityGameID"`
+
 	// These are available in some event types
 	Ability *EventAbility `json:"ability"`
 	Source  *EventActor   `json:"source"`

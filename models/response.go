@@ -26,6 +26,7 @@ type GraphQLErrorLocation struct {
 // This is where the actual query results live
 type ResponseData struct {
 	ReportData *ReportData `json:"reportData,omitempty"`
+	GameData   *GameData   `json:"gameData,omitempty"`
 }
 
 // ReportData represents the reportData field in the API
@@ -76,4 +77,16 @@ type Fight struct {
 	Kill            bool    `json:"kill"`            // true if boss was killed
 	Difficulty      int     `json:"difficulty"`      // Difficulty (10N, 25H, etc)
 	FightPercentage float64 `json:"fightPercentage"` // Boss health % when fight ended
+}
+
+// GameData represents the gameData field for static game information
+type GameData struct {
+	Ability *GameAbility `json:"ability,omitempty"` // Single ability lookup
+}
+
+// GameAbility represents ability information from gameData
+type GameAbility struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Icon string `json:"icon"`
 }

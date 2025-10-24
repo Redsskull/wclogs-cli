@@ -151,27 +151,30 @@ Examples:
 	healingCmd.Flags().StringP("player", "p", "", "Filter by specific player name")
 	rootCmd.AddCommand(healingCmd)
 
-	// TEST: Events API exploration command
-	var testEventsCmd = &cobra.Command{
-		Use:   "test-events [report-code] [fight-id]",
-		Short: "🧪 Test Events API (research command)",
-		Long: color.HiMagentaString(`
-🧪 TEST EVENTS API
+	// Deaths Analysis command - Uses Events API for death analysis
+	var deathsCmd = &cobra.Command{
+		Use:   "deaths [report-code] [fight-id]",
+		Short: "💀 Death analysis with summary and detailed modes",
+		Long: color.HiRedString(`
+💀 DEATH ANALYSIS
 
-Research command to explore how the Events API works.
-Shows raw JSON structure for implementing proper death analysis.
+Two modes available:
+• SUMMARY MODE (default): Concise overview of all deaths with timeline
+• DETAILED MODE: In-depth analysis with healing/defensive data
 
 Examples:
-  wclogs test-events Hw9TZc2WyrVKJLCa 99
-  wclogs test-events Hw9TZc2WyrVKJLCa 99 --verbose
+  wclogs deaths Hw9TZc2WyrVKJLCa 99                    # Summary of all deaths
+  wclogs deaths Hw9TZc2WyrVKJLCa 99 --player "Jusdis"  # Detailed analysis for specific player
+  wclogs deaths Hw9TZc2WyrVKJLCa 99 --verbose          # Verbose summary mode
 `) + "\n",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verbose, _ := cmd.Flags().GetBool("verbose")
-			return executeTestEvents(args[0], args[1], verbose)
+			playerName, _ := cmd.Flags().GetString("player")
+			return executeDeathAnalysis(args[0], args[1], playerName, verbose)
 		},
 	}
-	testEventsCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
-	rootCmd.AddCommand(testEventsCmd)
-
+	deathsCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
+	deathsCmd.Flags().StringP("player", "p", "", "Filter to specific player")
+	rootCmd.AddCommand(deathsCmd)
 }
