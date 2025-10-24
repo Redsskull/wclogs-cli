@@ -1,9 +1,11 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 // SortPlayersByTotal sorts players by their total value (descending order)
@@ -94,4 +96,89 @@ func FormatClassBreakdown(breakdown map[string]float64) string {
 		result.WriteString(fmt.Sprintf("%s: %s\n", class, FormatNumber(int64(total))))
 	}
 	return strings.TrimSpace(result.String())
+}
+
+// ParseEventsJSON parses the raw JSON data from Events API into Event structs
+func ParseEventsJSON(data json.RawMessage) ([]*Event, error) {
+	var events []*Event
+	if err := json.Unmarshal(data, &events); err != nil {
+		return nil, fmt.Errorf("failed to parse events JSON: %w", err)
+	}
+	return events, nil
+}
+
+// ParseDeathEvents converts raw events into death analysis
+func ParseDeathEvents(events []*Event, fightStartTime float64) ([]*DeathEvent, error) {
+	var deaths []*DeathEvent
+
+	for _, event := range events {
+		if event.Type == "death" {
+			death := &DeathEvent{
+				Timestamp:     event.Timestamp,
+				TimeFromStart: time.Duration((event.Timestamp - fightStartTime) * float64(time.Millisecond)),
+				Overkill:      0,
+			}
+
+			if event.TargetID != nil {
+				death.PlayerID = *event.TargetID
+			}
+
+			if event.Overkill != nil {
+				death.Overkill = *event.Overkill
+			}
+
+			if event.Ability != nil {
+				death.KillingAbility = event.Ability
+			}
+
+			if event.Source != nil {
+				death.KillingSource = event.Source
+			}
+
+			deaths = append(deaths, death)
+		}
+	}
+
+	return deaths, nil
+}
+
+// ParseDamageEvents converts raw events into damage events
+func ParseDamageEvents(events []*Event, fightStartTime float64) ([]*DamageEvent, error) {
+	var damages []*DamageEvent
+
+	for _, event := range events {
+		if event.Type == "damage" && event.Amount != nil {
+			damage := &DamageEvent{
+				Timestamp:     event.Timestamp,
+				TimeFromStart: time.Duration((event.Timestamp - fightStartTime) * float64(time.Millisecond)),
+				Amount:        *event.Amount,
+				Tick:          event.Tick != nil && *event.Tick,
+			}
+
+			if event.HitType != nil {
+				damage.HitType = *event.HitType
+			}
+
+			if event.Ability != nil {
+				damage.Ability = event.Ability
+			}
+
+			if event.Source != nil {
+				damage.Source = event.Source
+			}
+
+			damages = append(damages, damage)
+		}
+	}
+
+	return damages, nil
+}
+
+// GetPlayerLookup creates a player ID to name mapping
+func GetPlayerLookup(actors []*Actor) map[int]string {
+	lookup := make(map[int]string)
+	for _, actor := range actors {
+		lookup[actor.ID] = actor.Name
+	}
+	return lookup
 }

@@ -41,12 +41,19 @@ type Report struct {
 	EndTime    int64           `json:"endTime,omitempty"`    // Unix timestamp
 	Fights     []Fight         `json:"fights,omitempty"`     // All fights in this report
 	Table      json.RawMessage `json:"table,omitempty"`      // Table data for this report
+	Events     *EventsResponse `json:"events,omitempty"`     // Events data from Events API
 	MasterData *MasterData     `json:"masterData,omitempty"` // Report metadata including players
 }
 
 // MasterData represents the masterData field containing report metadata
 type MasterData struct {
 	Actors []Actor `json:"actors,omitempty"` // All actors (players) in the report
+}
+
+// EventsResponse represents the response from the Events API
+type EventsResponse struct {
+	Data              json.RawMessage `json:"data"`
+	NextPageTimestamp *float64        `json:"nextPageTimestamp"`
 }
 
 // Actor represents a player in the report

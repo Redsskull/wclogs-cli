@@ -25,26 +25,6 @@ const (
 			}
 		}`
 
-	// DeathsTableQuery fetches death event data for a specific fight
-	DeathsTableQuery = `
-		query DeathsTable($code: String!, $fightID: Int!) {
-			reportData {
-				report(code: $code) {
-					table(fightIDs: [$fightID], dataType: Deaths)
-				}
-			}
-		}`
-
-	// InterruptsTableQuery fetches interrupt data for a specific fight
-	InterruptsTableQuery = `
-		query InterruptsTable($code: String!, $fightID: Int!) {
-			reportData {
-				report(code: $code) {
-					table(fightIDs: [$fightID], dataType: Interrupts)
-				}
-			}
-		}`
-
 	// MasterDataQuery fetches all players and their information from a report
 	// This is used by the players command and for player name → ID mapping
 	MasterDataQuery = `
@@ -64,6 +44,78 @@ const (
 				}
 			}
 		}`
+
+	// DeathEventsQuery fetches death events from the Events API
+	// Note: data field is JSON type, so we can't make subselections on it
+	DeathEventsQuery = `
+		query DeathEvents($code: String!, $fightID: Int!, $playerID: Int) {
+			reportData {
+				report(code: $code) {
+					events(
+						fightIDs: [$fightID],
+						targetID: $playerID,
+						dataType: Deaths,
+						limit: 100
+					) {
+						data
+						nextPageTimestamp
+					}
+				}
+			}
+		}`
+
+	// DamageTakenBeforeDeathQuery fetches damage taken events before a death
+	DamageTakenBeforeDeathQuery = `
+		query DamageTakenBeforeDeath($code: String!, $fightID: Int!, $playerID: Int!, $startTime: Float!, $endTime: Float!) {
+			reportData {
+				report(code: $code) {
+					events(
+						fightIDs: [$fightID],
+						targetID: $playerID,
+						dataType: DamageTaken,
+						startTime: $startTime,
+						endTime: $endTime,
+						limit: 1000
+					) {
+						data
+						nextPageTimestamp
+					}
+				}
+			}
+		}`
+
+	// InterruptEventsQuery fetches interrupt events from the Events API
+	InterruptEventsQuery = `
+		query InterruptEvents($code: String!, $fightID: Int!, $playerID: Int) {
+			reportData {
+				report(code: $code) {
+					events(
+						fightIDs: [$fightID],
+						sourceID: $playerID,
+						dataType: Interrupts,
+						limit: 100
+					) {
+						data
+						nextPageTimestamp
+					}
+				}
+			}
+		}`
+
+	// TestEventsQuery is a simple query to test the Events API structure
+	TestEventsQuery = `
+		query TestEvents($code: String!, $fightID: Int!) {
+			reportData {
+				report(code: $code) {
+					events(
+						fightIDs: [$fightID],
+						limit: 10
+					) {
+						data
+					}
+				}
+			}
+		}`
 )
 
 // NewTableRequest creates a generic GraphQL request for any table data type
@@ -74,10 +126,6 @@ func NewTableRequest(code string, fightID int, dataType DataType) *GraphQLReques
 		query = DamageTableQuery
 	case DataTypeHealing:
 		query = HealingTableQuery
-	case DataTypeDeaths:
-		query = DeathsTableQuery
-	case DataTypeInterrupts:
-		query = InterruptsTableQuery
 	default:
 		query = DamageTableQuery // fallback
 	}
@@ -101,7 +149,37 @@ func NewMasterDataRequest(code string) *GraphQLRequest {
 	}
 }
 
-// NewDamageTableRequest creates a GraphQL request for damage data (backwards compatibility)
+// Event API request functions
+
+// NewDeathEventsRequest creates a GraphQL request for death events
+func NewDeathEventsRequest(code string, fightID int, playerID *int) *GraphQLRequest {
+	variables := map[string]any{
+		"code":    code,
+		"fightID": fightID,
+	}
+
+	if playerID != nil {
+		variables["playerID"] = *playerID
+	}
+
+	return &GraphQLRequest{
+		Query:     DeathEventsQuery,
+		Variables: variables,
+	}
+}
+
+// NewTestEventsRequest creates a simple test query for the Events API
+func NewTestEventsRequest(code string, fightID int) *GraphQLRequest {
+	return &GraphQLRequest{
+		Query: TestEventsQuery,
+		Variables: map[string]any{
+			"code":    code,
+			"fightID": fightID,
+		},
+	}
+}
+
+// Legacy functions for backwards compatibility
 func NewDamageTableRequest(code string, fightID int) *GraphQLRequest {
 	return NewTableRequest(code, fightID, DataTypeDamage)
 }

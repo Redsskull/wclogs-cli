@@ -151,75 +151,27 @@ Examples:
 	healingCmd.Flags().StringP("player", "p", "", "Filter by specific player name")
 	rootCmd.AddCommand(healingCmd)
 
-	// Deaths command - NOW WITH --player FLAG
-	var deathsCmd = &cobra.Command{
-		Use:   "deaths [report-code] [fight-id]",
-		Short: "💀 Show death events for a fight",
-		Long: color.HiRedString(`
-💀 DEATHS TABLE COMMAND
-
-Display death events for all players in a specific fight.
-
-Examples:
-  wclogs deaths ABC123XYZ 5            # Show deaths for fight 5
-  wclogs deaths ABC123XYZ 5 --player "PlayerName" # Show specific player deaths
-  wclogs deaths ABC123XYZ 5 --verbose  # Show detailed analysis
-  wclogs deaths ABC123XYZ 5 --output deaths.json # Save to file
-`) + "\n",
-		Args: cobra.ExactArgs(2),
-		RunE: createTableHandler("deaths"),
-	}
-	deathsCmd.Flags().BoolP("no-color", "n", false, "Disable color output")
-	deathsCmd.Flags().StringP("player", "p", "", "Filter by specific player name")
-	rootCmd.AddCommand(deathsCmd)
-
-	// Interrupts command - NOW WITH --player FLAG
-	var interruptsCmd = &cobra.Command{
-		Use:   "interrupts [report-code] [fight-id]",
-		Short: "🛑 Show interrupt events for a fight",
+	// TEST: Events API exploration command
+	var testEventsCmd = &cobra.Command{
+		Use:   "test-events [report-code] [fight-id]",
+		Short: "🧪 Test Events API (research command)",
 		Long: color.HiMagentaString(`
-🛑 INTERRUPTS TABLE COMMAND
+🧪 TEST EVENTS API
 
-Display interrupt events performed by all players in a specific fight.
+Research command to explore how the Events API works.
+Shows raw JSON structure for implementing proper death analysis.
 
 Examples:
-  wclogs interrupts ABC123XYZ 5        # Show interrupts for fight 5
-  wclogs interrupts ABC123XYZ 5 --top 10 # Show top interrupters
-  wclogs interrupts ABC123XYZ 5 --player "PlayerName" # Show specific player
-  wclogs interrupts ABC123XYZ 5 --output interrupts.csv # Save to file
+  wclogs test-events Hw9TZc2WyrVKJLCa 99
+  wclogs test-events Hw9TZc2WyrVKJLCa 99 --verbose
 `) + "\n",
 		Args: cobra.ExactArgs(2),
-		RunE: createTableHandler("interrupts"),
-	}
-	interruptsCmd.Flags().BoolP("no-color", "n", false, "Disable color output")
-	interruptsCmd.Flags().StringP("player", "p", "", "Filter by specific player name")
-	rootCmd.AddCommand(interruptsCmd)
-
-	// Players command - NEW for Day 6 Afternoon
-	var playersCmd = &cobra.Command{
-		Use:   "players [report-code]",
-		Short: "👥 Show all players in a report",
-		Long: color.HiYellowString(`
-👥 PLAYERS LIST COMMAND
-
-Display all players who participated in a report, with their classes and servers.
-This is useful for seeing who was in the raid and getting exact names for filtering.
-
-Examples:
-  wclogs players ABC123XYZ              # Show all players in report
-  wclogs players ABC123XYZ --verbose    # Show detailed information
-  wclogs players ABC123XYZ --output players.csv # Save to file
-
-Use the exact names shown here with the --player flag:
-  wclogs damage ABC123XYZ 5 --player "PlayerName"
-`) + "\n",
-		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			reportCode := args[0]
 			verbose, _ := cmd.Flags().GetBool("verbose")
-			outputPath, _ := cmd.Flags().GetString("output")
-			return executePlayersCommand(reportCode, verbose, outputPath)
+			return executeTestEvents(args[0], args[1], verbose)
 		},
 	}
-	rootCmd.AddCommand(playersCmd)
+	testEventsCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
+	rootCmd.AddCommand(testEventsCmd)
+
 }

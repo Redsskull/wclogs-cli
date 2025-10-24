@@ -1,5 +1,9 @@
 package models
 
+import (
+	"time"
+)
+
 // TableType represents the different types of data we can query
 type TableType string
 
@@ -96,4 +100,93 @@ func NewPlayerFromEntry(entry *PlayerEntry) *Player {
 		ItemLevel: entry.ItemLevel,
 		DPS:       entry.DPS(),
 	}
+}
+
+// Event represents a single combat log event
+type Event struct {
+	Timestamp float64 `json:"timestamp"`
+	Type      string  `json:"type"`
+	SourceID  *int    `json:"sourceID"`
+	TargetID  *int    `json:"targetID"`
+	AbilityID *int    `json:"abilityGameID"`
+	Amount    *int    `json:"amount"`
+	HitType   *int    `json:"hitType"`
+	Overkill  *int    `json:"overkill"`
+	Tick      *bool   `json:"tick"`
+
+	// These are available in some event types
+	Ability *EventAbility `json:"ability"`
+	Source  *EventActor   `json:"source"`
+	Target  *EventActor   `json:"target"`
+}
+
+// EventAbility represents ability information in events
+type EventAbility struct {
+	Name   string `json:"name"`
+	GameID int    `json:"gameID"`
+	Type   int    `json:"type"`
+	Icon   string `json:"icon"`
+}
+
+// EventActor represents source/target information in events
+type EventActor struct {
+	Name string `json:"name"`
+	ID   int    `json:"id"`
+	Type string `json:"type"`
+	Icon string `json:"icon"`
+}
+
+// DeathEvent represents a death event with parsed details
+type DeathEvent struct {
+	PlayerID             int
+	PlayerName           string
+	Timestamp            float64
+	TimeFromStart        time.Duration
+	KillingAbility       *EventAbility
+	KillingSource        *EventActor
+	Overkill             int
+	DamageLeadingToDeath []*DamageEvent
+}
+
+// DamageEvent represents damage taken before death
+type DamageEvent struct {
+	Timestamp     float64
+	TimeFromStart time.Duration
+	Ability       *EventAbility
+	Source        *EventActor
+	Amount        int
+	HitType       int
+	Tick          bool
+}
+
+// InterruptEvent represents an interrupt event
+type InterruptEvent struct {
+	PlayerID           int
+	PlayerName         string
+	Timestamp          float64
+	TimeFromStart      time.Duration
+	Ability            *EventAbility
+	Target             *EventActor
+	InterruptedAbility *EventAbility
+}
+
+// InterruptAnalysis represents interrupt statistics for a player
+type InterruptAnalysis struct {
+	PlayerID             int
+	PlayerName           string
+	SuccessfulInterrupts int
+	MissedOpportunities  int
+	InterruptSuccess     float64
+	InterruptDetails     []*InterruptEvent
+}
+
+// DeathAnalysis represents death analysis for a player
+type DeathAnalysis struct {
+	PlayerID               int
+	PlayerName             string
+	Deaths                 []*DeathEvent
+	TotalDeaths            int
+	AverageSurvivalTime    time.Duration
+	AverageDamagePerSecond float64
+	TopCausesOfDeath       []string
 }

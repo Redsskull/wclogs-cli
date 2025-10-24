@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -187,4 +189,71 @@ func filterPlayersByName(players []*models.Player, targetName string) []*models.
 	}
 
 	return filtered
+}
+
+// executeTestEvents handles the test-events command for Events API exploration
+func executeTestEvents(reportCode string, fightIDStr string, verbose bool) error {
+	fightID, err := strconv.Atoi(fightIDStr)
+	if err != nil {
+		return fmt.Errorf("fight-id must be a number, got: %s", fightIDStr)
+	}
+
+	if verbose {
+		color.HiBlue("🧪 Testing Events API with report %s, fight %d", reportCode, fightID)
+	}
+
+	// Setup API client (same pattern as table commands)
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	authClient := auth.NewClient(cfg.ClientID, cfg.ClientSecret)
+	apiClient := api.NewClient(authClient)
+
+	// Validate parameters
+	if err := api.ValidateQueryVariables(reportCode, fightID); err != nil {
+		return fmt.Errorf("invalid parameters: %w", err)
+	}
+
+	// Make the test query
+	if verbose {
+		color.HiBlue("🚀 Executing simple Events API test query...")
+	}
+
+	request := api.NewTestEventsRequest(reportCode, fightID)
+	response, err := apiClient.Query(request.Query, request.Variables)
+	if err != nil {
+		return fmt.Errorf("query failed: %w", err)
+	}
+
+	// Check if we have events data
+	if response.Data != nil && response.Data.ReportData != nil &&
+		response.Data.ReportData.Report != nil && response.Data.ReportData.Report.Events != nil {
+
+		color.HiGreen("✅ Events API query successful!")
+		fmt.Printf("\n🧪 RAW EVENTS JSON (first 500 chars):\n")
+
+		// Show sample of the events data
+		eventsJSON := string(response.Data.ReportData.Report.Events.Data)
+		if len(eventsJSON) > 500 {
+			fmt.Printf("%s...\n[truncated - total length: %d characters]\n",
+				eventsJSON[:500], len(eventsJSON))
+		} else {
+			fmt.Printf("%s\n", eventsJSON)
+		}
+
+		if verbose {
+			color.HiBlue("📊 Full response structure:")
+			jsonData, _ := json.MarshalIndent(response, "", "  ")
+			fmt.Printf("%s\n", jsonData)
+		}
+	} else {
+		color.HiYellow("⚠️  No events data found")
+		if verbose {
+			fmt.Printf("Response: %+v\n", response.Data)
+		}
+	}
+
+	return nil
 }
