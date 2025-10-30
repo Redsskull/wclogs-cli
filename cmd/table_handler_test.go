@@ -52,12 +52,12 @@ func TestFilterPlayersByName(t *testing.T) {
 			if len(result) != tt.expected {
 				t.Errorf("filterPlayersByName() returned %d players, expected %d", len(result), tt.expected)
 			}
-			
+
 			if tt.expected > 0 && len(result) > 0 {
 				// Verify the matched player has the correct name (case-insensitive)
 				found := false
 				for _, player := range players {
-					if player.Name == result[0].Name && 
+					if player.Name == result[0].Name &&
 						toLowerCase(player.Name) == toLowerCase(tt.target) {
 						found = true
 						break
@@ -126,17 +126,17 @@ func TestTableTypesInfo(t *testing.T) {
 func TestCreateTableHandler(t *testing.T) {
 	// Test that the function returns a valid handler
 	handler := createTableHandler("damage")
-	
+
 	// The handler is a function, so we can't directly check its contents
 	// But we can at least verify it's not nil
 	if handler == nil {
 		t.Error("createTableHandler() should not return nil")
 	}
-	
+
 	// Test with different table types
 	damageHandler := createTableHandler("damage")
 	healingHandler := createTableHandler("healing")
-	
+
 	// Both should be valid functions (though we can't compare functions directly)
 	if damageHandler == nil || healingHandler == nil {
 		t.Error("createTableHandler() should return valid handlers for known table types")
@@ -151,19 +151,19 @@ func TestTableInfoStruct(t *testing.T) {
 		Title:       "DAMAGE TABLE",
 		Emoji:       "🗡️",
 	}
-	
+
 	if info.DataType != "DamageDone" {
 		t.Errorf("TableInfo DataType = %v, expected %v", info.DataType, "DamageDone")
 	}
-	
+
 	if info.Description != "damage done" {
 		t.Errorf("TableInfo Description = %v, expected %v", info.Description, "damage done")
 	}
-	
+
 	if info.Title != "DAMAGE TABLE" {
 		t.Errorf("TableInfo Title = %v, expected %v", info.Title, "DAMAGE TABLE")
 	}
-	
+
 	if info.Emoji != "🗡️" {
 		t.Errorf("TableInfo Emoji = %v, expected %v", info.Emoji, "🗡️")
 	}

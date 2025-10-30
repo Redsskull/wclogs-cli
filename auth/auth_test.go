@@ -7,19 +7,19 @@ import (
 
 func TestNewClient(t *testing.T) {
 	client := NewClient("test_id", "test_secret")
-	
+
 	if client.ClientID != "test_id" {
 		t.Errorf("NewClient() ClientID = %v, expected %v", client.ClientID, "test_id")
 	}
-	
+
 	if client.ClientSecret != "test_secret" {
 		t.Errorf("NewClient() ClientSecret = %v, expected %v", client.ClientSecret, "test_secret")
 	}
-	
+
 	if client.httpClient == nil {
 		t.Error("NewClient() httpClient should not be nil")
 	}
-	
+
 	// Check if the client has a default timeout
 	if client.httpClient.Timeout == 0 {
 		t.Error("NewClient() httpClient should have a timeout")
@@ -28,10 +28,10 @@ func TestNewClient(t *testing.T) {
 
 func TestIsTokenValid(t *testing.T) {
 	tests := []struct {
-		name           string
-		accessToken    string
-		expiresAt      time.Time
-		expectedValid  bool
+		name          string
+		accessToken   string
+		expiresAt     time.Time
+		expectedValid bool
 	}{
 		{
 			name:          "valid token",
@@ -90,7 +90,7 @@ func TestGetAuthHeader(t *testing.T) {
 func TestEnsureValidToken(t *testing.T) {
 	// This test would require mocking the GetAccessToken method
 	// For now, we'll test the logic path when token is valid
-	
+
 	client := &Client{
 		AccessToken: "valid_token",
 		ExpiresAt:   time.Now().Add(1 * time.Hour), // Token is valid
@@ -101,7 +101,7 @@ func TestEnsureValidToken(t *testing.T) {
 	if err != nil {
 		t.Errorf("EnsureValidToken() returned error when token was valid: %v", err)
 	}
-	
+
 	if client.AccessToken != "valid_token" {
 		t.Errorf("EnsureValidToken() changed token when it should not have")
 	}

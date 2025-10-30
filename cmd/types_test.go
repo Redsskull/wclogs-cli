@@ -39,13 +39,13 @@ func TestTableTypesMap(t *testing.T) {
 
 	// Test that it contains the expected keys
 	expectedKeys := []string{"damage", "healing"}
-	
+
 	for _, key := range expectedKeys {
 		if _, exists := tableTypes[key]; !exists {
 			t.Errorf("tableTypes should contain key '%s'", key)
 		}
 	}
-	
+
 	// Test a few specific values
 	damageInfo := tableTypes["damage"]
 	if damageInfo.Description != "damage done" {
@@ -64,6 +64,6 @@ func TestInternalConstants(t *testing.T) {
 	// But we can verify the structure exists and is accessible
 	_ = TableInfo{}
 	_ = tableTypes
-	
+
 	// If these don't cause compilation errors, the types are properly defined
 }

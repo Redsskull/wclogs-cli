@@ -106,6 +106,42 @@ func ParseEventsJSON(data json.RawMessage) ([]*Event, error) {
 	return events, nil
 }
 
+// ParseInterruptEventsJSON parses interrupt events specifically from raw JSON data
+func ParseInterruptEventsJSON(data json.RawMessage) ([]*Event, error) {
+	var events []*Event
+	if err := json.Unmarshal(data, &events); err != nil {
+		return nil, fmt.Errorf("failed to parse interrupt events JSON: %w", err)
+	}
+
+	// Filter to only interrupt events
+	var interruptEvents []*Event
+	for _, event := range events {
+		if event.Type == "interrupt" {
+			interruptEvents = append(interruptEvents, event)
+		}
+	}
+
+	return interruptEvents, nil
+}
+
+// ParseCastEventsJSON parses cast events specifically from raw JSON data
+func ParseCastEventsJSON(data json.RawMessage) ([]*Event, error) {
+	var events []*Event
+	if err := json.Unmarshal(data, &events); err != nil {
+		return nil, fmt.Errorf("failed to parse cast events JSON: %w", err)
+	}
+
+	// Filter to only cast events
+	var castEvents []*Event
+	for _, event := range events {
+		if event.Type == "cast" || event.Type == "begincast" {
+			castEvents = append(castEvents, event)
+		}
+	}
+
+	return castEvents, nil
+}
+
 // GetPlayerLookup creates a player ID to name mapping
 func GetPlayerLookup(actors []*Actor) map[int]string {
 	lookup := make(map[int]string)

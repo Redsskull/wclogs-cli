@@ -170,10 +170,35 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verbose, _ := cmd.Flags().GetBool("verbose")
 			playerName, _ := cmd.Flags().GetString("player")
-			return executeDeathAnalysis(args[0], args[1], playerName, verbose)
+			return ExecuteDeathAnalysis(args[0], args[1], playerName, verbose)
 		},
 	}
 	deathsCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 	deathsCmd.Flags().StringP("player", "p", "", "Filter to specific player")
 	rootCmd.AddCommand(deathsCmd)
+
+	// Interrupt Analysis command - Uses Events API for interrupt analysis
+	var interruptCmd = &cobra.Command{
+		Use:   "interrupts [report-code] [fight-id]",
+		Short: "🎛️  Interrupt analysis with detailed breakdown",
+		Long: color.HiBlueString(`
+🎛️  INTERRUPT ANALYSIS
+
+Analyze interrupts performed and casts that were stopped during a fight.
+
+Examples:
+  wclogs interrupts Hw9TZc2WyrVKJLCa 99                    # Summary of all interrupts
+  wclogs interrupts Hw9TZc2WyrVKJLCa 99 --player "PlayerName"  # Detailed analysis for specific player
+  wclogs interrupts Hw9TZc2WyrVKJLCa 99 --verbose          # Verbose interrupt analysis
+`) + "\n",
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			verbose, _ := cmd.Flags().GetBool("verbose")
+			playerName, _ := cmd.Flags().GetString("player")
+			return ExecuteInterruptAnalysis(args[0], args[1], playerName, verbose)
+		},
+	}
+	interruptCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
+	interruptCmd.Flags().StringP("player", "p", "", "Filter to specific player")
+	rootCmd.AddCommand(interruptCmd)
 }

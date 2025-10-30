@@ -61,3 +61,12 @@ const (
 	DataTypeDeaths     DataType = "Deaths"
 	DataTypeInterrupts DataType = "Interrupts"
 )
+
+// EventHostilityType represents the hostility type for filtering events
+type EventHostilityType string
+
+const (
+	EventHostilityFriendly EventHostilityType = "Friendlies" // Fixed!
+	EventHostilityHostile  EventHostilityType = "Enemies"
+	EventHostilityAll      EventHostilityType = "All"
+)

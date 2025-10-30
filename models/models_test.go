@@ -6,15 +6,15 @@ import (
 
 func TestNewGraphQLResponse(t *testing.T) {
 	response := NewGraphQLResponse()
-	
+
 	if response.Data == nil {
 		t.Error("NewGraphQLResponse() Data should not be nil")
 	}
-	
+
 	if response.Errors == nil {
 		t.Error("NewGraphQLResponse() Errors should not be nil")
 	}
-	
+
 	if len(response.Errors) != 0 {
 		t.Errorf("NewGraphQLResponse() Errors should be empty, got %d", len(response.Errors))
 	}
@@ -22,19 +22,19 @@ func TestNewGraphQLResponse(t *testing.T) {
 
 func TestNewPlayer(t *testing.T) {
 	player := NewPlayer("TestPlayer", "Warrior", 1000.0, "icon_url")
-	
+
 	if player.Name != "TestPlayer" {
 		t.Errorf("NewPlayer() Name = %v, expected %v", player.Name, "TestPlayer")
 	}
-	
+
 	if player.Class != "Warrior" {
 		t.Errorf("NewPlayer() Class = %v, expected %v", player.Class, "Warrior")
 	}
-	
+
 	if player.Total != 1000.0 {
 		t.Errorf("NewPlayer() Total = %v, expected %v", player.Total, 1000.0)
 	}
-	
+
 	if player.Icon != "icon_url" {
 		t.Errorf("NewPlayer() Icon = %v, expected %v", player.Icon, "icon_url")
 	}
@@ -42,11 +42,11 @@ func TestNewPlayer(t *testing.T) {
 
 func TestNewTableData(t *testing.T) {
 	tableData := NewTableData()
-	
+
 	if tableData.Entries == nil {
 		t.Error("NewTableData() Entries should not be nil")
 	}
-	
+
 	if len(tableData.Entries) != 0 {
 		t.Errorf("NewTableData() Entries should be empty, got %d", len(tableData.Entries))
 	}
@@ -309,12 +309,12 @@ func TestDeathEventStruct(t *testing.T) {
 	source := &EventActor{Name: "Fractillus", ID: 24, Type: "NPC", Icon: "boss_icon"}
 
 	deathEvent := DeathEvent{
-		PlayerID:      123,
-		PlayerName:    "TestPlayer",
-		Timestamp:     1000.5,
+		PlayerID:       123,
+		PlayerName:     "TestPlayer",
+		Timestamp:      1000.5,
 		KillingAbility: ability,
 		KillingSource:  source,
-		Overkill:      10000,
+		Overkill:       10000,
 	}
 
 	if deathEvent.PlayerID != 123 {
@@ -330,12 +330,12 @@ func TestDeathEventStruct(t *testing.T) {
 	}
 
 	if deathEvent.KillingAbility == nil || deathEvent.KillingAbility.Name != "Crystalline Shockwave" {
-		t.Errorf("DeathEvent KillingAbility.Name = %v, expected %v", 
+		t.Errorf("DeathEvent KillingAbility.Name = %v, expected %v",
 			deathEvent.KillingAbility.Name, "Crystalline Shockwave")
 	}
 
 	if deathEvent.KillingSource == nil || deathEvent.KillingSource.Name != "Fractillus" {
-		t.Errorf("DeathEvent KillingSource.Name = %v, expected %v", 
+		t.Errorf("DeathEvent KillingSource.Name = %v, expected %v",
 			deathEvent.KillingSource.Name, "Fractillus")
 	}
 

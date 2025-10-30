@@ -1,7 +1,11 @@
 package api
 
+import (
+	"fmt"
+)
+
 // GraphQL query constants
-// I define these as constants so they're reusable and easy to maintain
+// These queries use the Warcraft Logs v2 GraphQL API
 
 const (
 	// DamageTableQuery fetches damage data for a specific fight
@@ -66,18 +70,8 @@ const (
 			}
 		}`
 
-	// AbilityLookupQuery fetches ability names from game data
-	AbilityLookupQuery = `
-		query AbilityLookup($abilityIDs: [Int!]!) {
-			gameData {
-				abilities: [
-					# We need to query each ability individually
-					# This will be constructed dynamically per ability ID
-				]
-			}
-		}`
-
-	// SingleAbilityLookupQuery fetches a single ability name
+	// SingleAbilityLookupQuery fetches a single ability name from game data
+	// This is used to resolve ability IDs from events to human-readable names
 	SingleAbilityLookupQuery = `
 		query SingleAbilityLookup($abilityID: Int!) {
 			gameData {
@@ -110,14 +104,16 @@ const (
 
 	// DeathEventsQuery fetches death events from the Events API
 	// Note: data field is JSON type, so we can't make subselections on it
+	// Supports pagination via startTime parameter
 	DeathEventsQuery = `
-		query DeathEvents($code: String!, $fightID: Int!, $playerID: Int) {
+		query DeathEvents($code: String!, $fightID: Int!, $playerID: Int, $startTime: Float) {
 			reportData {
 				report(code: $code) {
 					events(
 						fightIDs: [$fightID],
 						targetID: $playerID,
 						dataType: Deaths,
+						startTime: $startTime,
 						limit: 100
 					) {
 						data
@@ -188,15 +184,17 @@ const (
 		}`
 
 	// InterruptEventsQuery fetches interrupt events from the Events API
+	// Supports pagination via startTime parameter
 	InterruptEventsQuery = `
-		query InterruptEvents($code: String!, $fightID: Int!, $playerID: Int) {
+		query InterruptEvents($code: String!, $fightID: Int!, $playerID: Int, $startTime: Float) {
 			reportData {
 				report(code: $code) {
 					events(
 						fightIDs: [$fightID],
 						sourceID: $playerID,
 						dataType: Interrupts,
-						limit: 100
+						startTime: $startTime,
+						limit: 10000
 					) {
 						data
 						nextPageTimestamp
@@ -205,6 +203,8 @@ const (
 			}
 		}`
 )
+
+// Table Request Functions
 
 // NewTableRequest creates a generic GraphQL request for any table data type
 func NewTableRequest(code string, fightID int, dataType DataType) *GraphQLRequest {
@@ -227,20 +227,12 @@ func NewTableRequest(code string, fightID int, dataType DataType) *GraphQLReques
 	}
 }
 
+// Master Data Request Functions
+
 // NewMasterDataRequest creates a GraphQL request for player information
 func NewMasterDataRequest(code string) *GraphQLRequest {
 	return &GraphQLRequest{
 		Query: MasterDataQuery,
-		Variables: map[string]any{
-			"code": code,
-		},
-	}
-}
-
-// NewFightInfoRequest creates a GraphQL request for fight information
-func NewFightInfoRequest(code string) *GraphQLRequest {
-	return &GraphQLRequest{
-		Query: FightInfoQuery,
 		Variables: map[string]any{
 			"code": code,
 		},
@@ -257,7 +249,22 @@ func NewAllActorsRequest(code string) *GraphQLRequest {
 	}
 }
 
+// Fight Info Request Functions
+
+// NewFightInfoRequest creates a GraphQL request for fight information
+func NewFightInfoRequest(code string) *GraphQLRequest {
+	return &GraphQLRequest{
+		Query: FightInfoQuery,
+		Variables: map[string]any{
+			"code": code,
+		},
+	}
+}
+
+// Ability Lookup Request Functions
+
 // NewAbilityLookupRequest creates a GraphQL request for ability name lookup
+// This queries the gameData API to resolve ability IDs to names
 func NewAbilityLookupRequest(abilityID int) *GraphQLRequest {
 	return &GraphQLRequest{
 		Query: SingleAbilityLookupQuery,
@@ -267,10 +274,11 @@ func NewAbilityLookupRequest(abilityID int) *GraphQLRequest {
 	}
 }
 
-// Event API request functions
+// Event API Request Functions
 
 // NewDeathEventsRequest creates a GraphQL request for death events
-func NewDeathEventsRequest(code string, fightID int, playerID *int) *GraphQLRequest {
+// playerID and startTime are optional (pass nil to omit)
+func NewDeathEventsRequest(code string, fightID int, playerID *int, startTime *float64) *GraphQLRequest {
 	variables := map[string]any{
 		"code":    code,
 		"fightID": fightID,
@@ -280,16 +288,20 @@ func NewDeathEventsRequest(code string, fightID int, playerID *int) *GraphQLRequ
 		variables["playerID"] = *playerID
 	}
 
+	if startTime != nil {
+		variables["startTime"] = *startTime
+	}
+
 	return &GraphQLRequest{
 		Query:     DeathEventsQuery,
 		Variables: variables,
 	}
 }
 
-// NewHealingReceivedRequest creates a GraphQL request for healing received before death
-func NewHealingReceivedRequest(code string, fightID int, playerID int, startTime, endTime float64) *GraphQLRequest {
+// NewDamageTakenRequest creates a GraphQL request for damage taken before death
+func NewDamageTakenRequest(code string, fightID int, playerID int, startTime, endTime float64) *GraphQLRequest {
 	return &GraphQLRequest{
-		Query: HealingReceivedBeforeDeathQuery,
+		Query: DamageTakenBeforeDeathQuery,
 		Variables: map[string]any{
 			"code":      code,
 			"fightID":   fightID,
@@ -300,10 +312,10 @@ func NewHealingReceivedRequest(code string, fightID int, playerID int, startTime
 	}
 }
 
-// NewDamageTakenRequest creates a GraphQL request for damage taken before death
-func NewDamageTakenRequest(code string, fightID int, playerID int, startTime, endTime float64) *GraphQLRequest {
+// NewHealingReceivedRequest creates a GraphQL request for healing received before death
+func NewHealingReceivedRequest(code string, fightID int, playerID int, startTime, endTime float64) *GraphQLRequest {
 	return &GraphQLRequest{
-		Query: DamageTakenBeforeDeathQuery,
+		Query: HealingReceivedBeforeDeathQuery,
 		Variables: map[string]any{
 			"code":      code,
 			"fightID":   fightID,
@@ -325,5 +337,122 @@ func NewDefensiveAbilitiesRequest(code string, fightID int, playerID int, startT
 			"startTime": startTime,
 			"endTime":   endTime,
 		},
+	}
+}
+
+// Interrupt and Cast Event Request Functions
+
+// NewInterruptEventsRequest creates a GraphQL request for interrupt events
+// playerID and startTime are optional (pass nil to omit)
+// startTime is used for pagination - pass nextPageTimestamp from previous response
+func NewInterruptEventsRequest(code string, fightID int, playerID *int, startTime *float64) *GraphQLRequest {
+	variables := map[string]any{
+		"code":    code,
+		"fightID": fightID,
+	}
+
+	if playerID != nil {
+		variables["playerID"] = *playerID
+	}
+
+	if startTime != nil {
+		variables["startTime"] = *startTime
+	}
+
+	return &GraphQLRequest{
+		Query:     InterruptEventsQuery,
+		Variables: variables,
+	}
+}
+
+// NewCastEventsRequest creates a GraphQL request for cast events with specific ability
+// abilityID is optional (pass nil to get all casts)
+// startTime is optional (pass nil for first page, use nextPageTimestamp for pagination)
+// hostilityType filters by Enemies or Friendlies
+func NewCastEventsRequest(code string, fightID int, abilityID *int, hostilityType EventHostilityType, startTime *float64) *GraphQLRequest {
+	// Validate hostility type (security: prevent injection)
+	if hostilityType != EventHostilityHostile && hostilityType != EventHostilityFriendly && hostilityType != EventHostilityAll {
+		hostilityType = EventHostilityHostile // safe default
+	}
+
+	// Build query with hostilityType as literal (WCL API requires enum as literal, not variable)
+	query := fmt.Sprintf(`
+		query CastEvents($code: String!, $fightID: Int!, $abilityID: Int, $startTime: Float) {
+			reportData {
+				report(code: $code) {
+					events(
+						fightIDs: [$fightID],
+						abilityID: $abilityID,
+						dataType: Casts,
+						hostilityType: %s,
+						startTime: $startTime,
+						limit: 10000
+					) {
+						data
+						nextPageTimestamp
+					}
+				}
+			}
+		}`, hostilityType)
+
+	variables := map[string]any{
+		"code":    code,
+		"fightID": fightID,
+	}
+
+	if abilityID != nil {
+		variables["abilityID"] = *abilityID
+	}
+
+	if startTime != nil {
+		variables["startTime"] = *startTime
+	}
+
+	return &GraphQLRequest{
+		Query:     query,
+		Variables: variables,
+	}
+}
+
+// NewAllCastEventsRequest creates a GraphQL request for all cast events
+// startTime is optional (pass nil for first page, use nextPageTimestamp for pagination)
+// hostilityType filters by Enemies or Friendlies
+func NewAllCastEventsRequest(code string, fightID int, hostilityType EventHostilityType, startTime *float64) *GraphQLRequest {
+	// Validate hostility type (security: prevent injection)
+	if hostilityType != EventHostilityHostile && hostilityType != EventHostilityFriendly && hostilityType != EventHostilityAll {
+		hostilityType = EventHostilityHostile // safe default
+	}
+
+	// Build query with hostilityType as literal (WCL API requires enum as literal, not variable)
+	query := fmt.Sprintf(`
+		query AllCastEvents($code: String!, $fightID: Int!, $startTime: Float) {
+			reportData {
+				report(code: $code) {
+					events(
+						fightIDs: [$fightID],
+						dataType: Casts,
+						hostilityType: %s,
+						startTime: $startTime,
+						limit: 10000
+					) {
+						data
+						nextPageTimestamp
+					}
+				}
+			}
+		}`, hostilityType)
+
+	variables := map[string]any{
+		"code":    code,
+		"fightID": fightID,
+	}
+
+	if startTime != nil {
+		variables["startTime"] = *startTime
+	}
+
+	return &GraphQLRequest{
+		Query:     query,
+		Variables: variables,
 	}
 }

@@ -26,6 +26,12 @@ var tableTypes = map[string]TableInfo{
 		DataType:    api.DataTypeHealing,
 		Description: "healing done",
 	},
+	"interrupts": {
+		Title:       "INTERRUPT TABLE",
+		Emoji:       "🎛️",
+		DataType:    api.DataTypeInterrupts,
+		Description: "interrupts performed",
+	},
 }
 
 // can add more types as I go along
