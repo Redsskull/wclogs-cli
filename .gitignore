@@ -75,9 +75,7 @@ Thumbs.db
 /docs/build/
 
 # Private development documents (keep these local)
-TODO.md
-API.md
-plan.md
+
 
 # Keep these important files (explicitly include)
 !README.md
