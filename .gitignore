@@ -91,3 +91,6 @@ debug.test
 
 # Saved report files (user data)
 saved_reports/
+
+wclogs
+wclogs.cast
