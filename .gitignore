@@ -75,6 +75,7 @@ Thumbs.db
 /docs/build/
 
 # Private development documents (keep these local)
+interrupts.md
 
 
 # Keep these important files (explicitly include)

@@ -2,7 +2,7 @@
 
 **A deep dive into complex API integration, GraphQL querying, and OAuth2 authentication.**
 
-I built this CLI tool to learn GraphQL by tackling a real-world challenge: the Warcraft Logs API. This project represents my journey from "What is GraphQL?" to implementing OAuth2 flows, complex nested queries, and terminal-based data visualization. While not feature-complete, it demonstrates practical API integration skills and the ability to learn complex technologies by building real tools.
+I built this CLI tool to learn GraphQL by tackling a real-world challenge: the Warcraft Logs API. This project represents my journey from "What is GraphQL?" to implementing OAuth2 flows, complex nested queries, terminal-based data visualization, and sophisticated event correlation. The breakthrough achievement was developing a professional-grade interrupt analysis system that matches Warcraft Logs' web interface functionality through discovery of hidden API fields and advanced event correlation techniques.
 
 ## Visual Examples
 
@@ -18,6 +18,9 @@ I built this CLI tool to learn GraphQL by tackling a real-world challenge: the W
 ### Death Analysis
 ![Death Analysis](images/deaths.png)
 
+### Interrupt Analysis
+*Professional WCL-style interrupt tracking with spell correlation and missed opportunity analysis*
+
 ## What This Project Demonstrates
 
 **Successfully Implemented:**
@@ -25,6 +28,7 @@ I built this CLI tool to learn GraphQL by tackling a real-world challenge: the W
 - ✅ **Complex GraphQL Queries** - Nested queries for damage, healing, deaths, and interrupts
 - ✅ **Professional Terminal UI** - Clean tables with formatted output
 - ✅ **Advanced Data Analysis** - Death timelines with 5-second damage breakdown
+- ✅ **Professional Interrupt Analysis** - WCL-style interrupt tracking with spell correlation
 - ✅ **Smart Caching** - Efficient ability name lookups
 - ✅ **Player Filtering** - Case-insensitive search across reports
 - ✅ **Data Export** - CSV and JSON formats
@@ -35,11 +39,11 @@ I built this CLI tool to learn GraphQL by tackling a real-world challenge: the W
 - OAuth2 token lifecycle management and refresh patterns
 - Parsing deeply nested JSON structures in Go
 - Correlating complex game events across multiple API responses
+- **Breakthrough discovery**: WCL's `extraAbilityGameID` field enables perfect interrupt-to-spell correlation
 
 **Known Limitations (Learning Opportunities):**
 - Specialization detection not implemented (Holy vs Ret Paladin, etc.)
 - Some spell details in death analysis need refinement
-- Interrupt correlation accuracy could be improved
 - Individual player ability analysis is incomplete
 
 These limitations reflect where I was in my learning journey, not the ceiling of what I can do. With what I know now about GraphQL and the WCL API structure, I'd approach these challenges differently.
@@ -78,7 +82,7 @@ go run main.go config
 go run main.go damage 6qNJmgYBTcyfvpWF 3
 go run main.go healing 6qNJmgYBTcyfvpWF 3 --top 5
 go run main.go deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp"
-go run main.go interrupts 6qNJmgYBTcyfvpWF 3
+go run main.go interrupts YMRqjzC2WPnhwNJd 2
 ```
 
 ## Command Examples
@@ -101,10 +105,16 @@ go run main.go deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp"
 # Detailed 5-second damage breakdown leading to death
 ```
 
-**Interrupt Tracking:**
+**Professional Interrupt Analysis:**
 ```bash
-go run main.go interrupts 6qNJmgYBTcyfvpWF 3 --player "PlayerName"
-# Player-specific or full raid interrupt analysis
+go run main.go interrupts YMRqjzC2WPnhwNJd 2
+# Full WCL-style analysis with stopped vs missed breakdown
+
+go run main.go interrupts YMRqjzC2WPnhwNJd 2 --player "BlagZeras"
+# Player-specific detailed interrupt performance
+
+go run main.go interrupts YMRqjzC2WPnhwNJd 2 --verbose
+# Detailed analysis with API progress tracking
 ```
 
 **Export Options:**
@@ -150,6 +160,24 @@ func analyzeDamageBeforeDeath(events []Event, deathTime int) []DamageSource {
 }
 ```
 
+### Advanced Interrupt Correlation
+```go
+// Breakthrough: Using extraAbilityGameID to correlate interrupted spells
+func (ic *InterruptCorrelator) parseRawInterruptJSON(data interface{}) ([]*models.InterruptEventDetail, error) {
+    for _, raw := range rawEvents {
+        if raw["type"] == "interrupt" {
+            interrupt := &models.InterruptEventDetail{
+                InterruptSpellID:     int(raw["abilityGameID"].(float64)),        // What interrupted
+                InterruptedSpellID:   int(raw["extraAbilityGameID"].(float64)),   // What was interrupted
+                InterrupterID:        int(raw["sourceID"].(float64)),
+                TargetID:             int(raw["targetID"].(float64)),
+            }
+            // This enables perfect WCL-style spell-specific interrupt analysis
+        }
+    }
+}
+```
+
 ## What I'd Do Differently Now
 
 **If I restarted this project with my current knowledge:**
@@ -179,7 +207,6 @@ This demonstrates several key skills employers value:
 If continuing development:
 - Implement specialization detection using character data queries
 - Refine spell detail accuracy in death analysis
-- Improve interrupt-to-cast event correlation
 - Add ability usage analysis for individual players
 - Create configuration profiles for different report types
 

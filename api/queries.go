@@ -103,7 +103,6 @@ const (
 		}`
 
 	// DeathEventsQuery fetches death events from the Events API
-	// Note: data field is JSON type, so we can't make subselections on it
 	// Supports pagination via startTime parameter
 	DeathEventsQuery = `
 		query DeathEvents($code: String!, $fightID: Int!, $playerID: Int, $startTime: Float) {
