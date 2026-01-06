@@ -19,9 +19,12 @@ go.work
 
 # Build outputs
 /bin/
+/build/
 /dist/
 wclogs-cli
 wclogs-cli.exe
+
+# Container artifacts
 
 # Security - Never commit credentials
 config.yaml

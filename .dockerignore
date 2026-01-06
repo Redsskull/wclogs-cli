@@ -1,0 +1,54 @@
+# Build artifacts
+build/
+wclogs
+wclogs.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Development files
+.git/
+.gitignore
+*.md
+docs/
+images/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+*_test.go
+coverage.txt
+coverage.html
+
+# User data and configs
+saved_reports/
+~/.wclogs.yaml
+config.yaml
+config.yml
+
+# Cache and temporary files
+.cache/
+*.tmp
+*.temp
+
+# Container files (don't need these in the image)
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Development scripts
+Makefile
+
+# Logs
+*.log
+logs/

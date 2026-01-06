@@ -2,6 +2,17 @@
 
 **A deep dive into complex API integration, GraphQL querying, and OAuth2 authentication.**
 
+## 🚀 One-Line Installation
+
+```bash
+# Install directly from GitHub
+go install github.com/Redsskull/wclogs-cli@latest
+
+# Setup and start analyzing
+wclogs config
+wclogs damage ABC123 5
+```
+
 I built this CLI tool to learn GraphQL by tackling a real-world challenge: the Warcraft Logs API. This project represents my journey from "What is GraphQL?" to implementing OAuth2 flows, complex nested queries, terminal-based data visualization, and sophisticated event correlation. The breakthrough achievement was developing a professional-grade interrupt analysis system that matches Warcraft Logs' web interface functionality through discovery of hidden API fields and advanced event correlation techniques.
 
 ## Visual Examples
@@ -68,59 +79,119 @@ User Input
 - **OAuth2** - Authentication and token management
 - **JSON** - Advanced parsing of nested data structures
 
-## Quick Start
+## Installation
+
+### Option 1: Using Makefile (Recommended)
 ```bash
 # Clone and setup
-git clone
+git clone https://github.com/Redsskull/wclogs-cli.git
+cd wclogs-cli
+
+# Complete setup (downloads deps, builds, shows next steps)
+make setup
+
+# Install globally
+make install
+# Now you can use 'wclogs' from anywhere
+```
+
+### Option 2: Go Install (Simplest)
+```bash
+# Install directly from GitHub (requires Go 1.19+)
+go install github.com/Redsskull/wclogs-cli@latest
+```
+
+### Option 3: Manual Build
+```bash
+# Clone and build
+git clone https://github.com/Redsskull/wclogs-cli.git
 cd wclogs-cli
 go mod tidy
+go build -o wclogs
 
-# Get API credentials at https://www.warcraftlogs.com/api/clients
-go run main.go config
+# Optional: Install globally (Unix/Linux/macOS)
+sudo mv wclogs /usr/local/bin/
+# Now you can use 'wclogs' from anywhere
 
-# Run commands
-go run main.go damage 6qNJmgYBTcyfvpWF 3
-go run main.go healing 6qNJmgYBTcyfvpWF 3 --top 5
-go run main.go deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp"
-go run main.go interrupts YMRqjzC2WPnhwNJd 2
+# Or add to PATH manually
+export PATH=$PATH:$(pwd)
+```
+
+### Option 4: Development Mode
+```bash
+# For development/testing only
+git clone https://github.com/Redsskull/wclogs-cli.git
+cd wclogs-cli
+go mod tidy
+go run main.go --help
+```
+
+### Option 5: Container (Optional)
+```bash
+# If you prefer containerized tools or lack Go runtime
+git clone https://github.com/Redsskull/wclogs-cli.git
+cd wclogs-cli
+
+# Run without local Go installation
+make container-run ARGS="config"
+make container-run ARGS="damage ABC123 5"
+```
+
+## Quick Examples
+
+**Native Installation:**
+```bash
+go install github.com/Redsskull/wclogs-cli@latest
+wclogs config
+wclogs damage 6qNJmgYBTcyfvpWF 3
+wclogs healing 6qNJmgYBTcyfvpWF 3 --top 5
+wclogs deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp"
+wclogs interrupts YMRqjzC2WPnhwNJd 2
+```
+
+**Container Installation:**
+```bash
+git clone https://github.com/Redsskull/wclogs-cli.git && cd wclogs-cli
+make container-run ARGS="config"
+make container-run ARGS="damage 6qNJmgYBTcyfvpWF 3"
 ```
 
 ## Command Examples
 
 **Damage Analysis:**
 ```bash
-go run main.go damage 6qNJmgYBTcyfvpWF 3
+wclogs damage 6qNJmgYBTcyfvpWF 3
 # Displays damage done by all players in fight #3
 ```
 
 **Healing with Filtering:**
 ```bash
-go run main.go healing 6qNJmgYBTcyfvpWF 3 --top 5
+wclogs healing 6qNJmgYBTcyfvpWF 3 --top 5
 # Shows top 5 healers with formatted table output
 ```
 
 **Death Timeline Analysis:**
 ```bash
-go run main.go deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp"
+wclogs deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp"
 # Detailed 5-second damage breakdown leading to death
 ```
 
 **Professional Interrupt Analysis:**
 ```bash
-go run main.go interrupts YMRqjzC2WPnhwNJd 2
+wclogs interrupts YMRqjzC2WPnhwNJd 2
 # Full WCL-style analysis with stopped vs missed breakdown
 
-go run main.go interrupts YMRqjzC2WPnhwNJd 2 --player "BlagZeras"
+wclogs interrupts YMRqjzC2WPnhwNJd 2 --player "BlagZeras"
 # Player-specific detailed interrupt performance
 
-go run main.go interrupts YMRqjzC2WPnhwNJd 2 --verbose
+wclogs interrupts YMRqjzC2WPnhwNJd 2 --verbose
 # Detailed analysis with API progress tracking
 ```
 
 **Export Options:**
 ```bash
-go run main.go damage 6qNJmgYBTcyfvpWF 3 --export csv
-go run main.go healing 6qNJmgYBTcyfvpWF 3 --export json
+wclogs damage 6qNJmgYBTcyfvpWF 3 --output damage.csv
+wclogs healing 6qNJmgYBTcyfvpWF 3 --output healing.json
 ```
 
 ## Code Highlights
@@ -219,26 +290,48 @@ If continuing development:
 - **Data Format:** JSON parsing and transformation
 - **Output:** Terminal tables, CSV, JSON export
 
-## Installation
+## Full Installation Options
+
+### Prerequisites
+- **Go 1.19+** (for native installation)
+- **Podman/Docker** (for container installation, optional)
+
+### Method 1: Go Install (Simplest)
 ```bash
-# Prerequisites: Go 1.19+
-
-# Clone repository
-git clone
-cd wclogs-cli
-
-# Install dependencies
-go mod tidy
-
-# Get API credentials
-# Visit: https://www.warcraftlogs.com/api/clients
-
-# Configure
-go run main.go config
-
-# Run
-go run main.go --help
+go install github.com/Redsskull/wclogs-cli@latest
+wclogs --help
 ```
+
+### Method 2: Container (No Go Required)
+```bash
+git clone https://github.com/Redsskull/wclogs-cli.git
+cd wclogs-cli
+make container-run ARGS="--help"
+```
+
+### Method 3: Manual Build
+```bash
+git clone https://github.com/Redsskull/wclogs-cli.git
+cd wclogs-cli
+make setup && make install  # Or: go mod tidy && go build -o wclogs
+```
+
+## Container Usage (Optional)
+
+Containers are useful for CI/CD, isolated environments, or when you prefer not to install Go locally:
+
+```bash
+# Setup credentials (one-time)
+make container-run ARGS="config"
+
+# Analyze reports
+make container-run ARGS="damage ABC123 5"
+make container-run ARGS="healing ABC123 5 --top 10"
+
+# Note: Native binaries offer better performance and user experience
+```
+
+
 
 ## My Learning Journey
 
@@ -249,6 +342,7 @@ I started this project to learn CLI development in Go and chose Warcraft Logs as
 - **Professional tools exist** - Postman, GraphQL playgrounds, etc.
 - **OAuth2 has nuance** - Token lifecycle, refresh flows, error handling
 - **Data visualization matters** - Clean terminal output requires thought
+
 
 This project pushed me beyond tutorials into real-world complexity. The incomplete features aren't failures—they're documented learning opportunities that show where I was then and how I'd approach them now.
 
