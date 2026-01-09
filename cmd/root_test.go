@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -74,4 +75,32 @@ func TestRootCmdRun(t *testing.T) {
 	// The Run function should print help when called without args
 	// This is difficult to test without capturing stdout
 	// So we'll just ensure the function exists and is set
+}
+
+// Test for resolveFightID function
+func TestResolveFightID(t *testing.T) {
+	// Test numeric fight ID parsing
+	t.Run("numeric fight ID", func(t *testing.T) {
+		fightID, err := resolveFightID("test", "5", false)
+		if err != nil {
+			t.Errorf("resolveFightID should parse numeric IDs, got error: %v", err)
+		}
+		if fightID != 5 {
+			t.Errorf("resolveFightID('5') = %d, expected 5", fightID)
+		}
+	})
+
+	// Test invalid fight ID format
+	t.Run("invalid fight ID", func(t *testing.T) {
+		_, err := resolveFightID("test", "invalid", false)
+		if err == nil {
+			t.Error("resolveFightID should return error for invalid fight ID")
+		}
+		if !strings.Contains(err.Error(), "fight-id must be a number or 'last'") {
+			t.Errorf("Error message should mention valid formats, got: %v", err)
+		}
+	})
+
+	// Note: Testing "last" keyword would require API mocking
+	// which is beyond the scope of this basic test
 }

@@ -11,6 +11,10 @@ go install github.com/Redsskull/wclogs-cli@latest
 # Container (no Go required)
 git clone https://github.com/Redsskull/wclogs-cli.git && cd wclogs-cli
 make container-run ARGS="config"
+
+**NEW**: Fight ID now supports "last" keyword to automatically select the most recent fight!
+
+**🔍 WCL API Discovery**: We discovered that Warcraft Logs uses `encounterID = 0` to mark trash fights. Our "last" implementation now uses this official WCL logic to match web interface behavior perfectly!
 ```
 
 For comprehensive documentation, see the [docs](./docs/) directory:
@@ -71,16 +75,16 @@ Enter your Client Secret: your_client_secret_here
 
 ## 📊 Table Commands
 
-### `wclogs damage [report-code] [fight-id]`
+### `wclogs damage [report-code] [fight-id|last]`
 **Purpose**: Display damage done by all players in a fight
 
 **Usage**:
 ```bash
 # Native binary
-./wclogs damage <report-code> <fight-id> [flags]
+./wclogs damage <report-code> <fight-id|last> [flags]
 
 # Container
-make container-run ARGS="damage <report-code> <fight-id> [flags]"
+make container-run ARGS="damage <report-code> <fight-id|last> [flags]"
 ```
 
 **Flags**:
@@ -90,16 +94,16 @@ make container-run ARGS="damage <report-code> <fight-id> [flags]"
 - `--no-color` - Disable colored output
 - `--verbose` - Show detailed progress
 
-### `wclogs healing [report-code] [fight-id]`
+### `wclogs healing [report-code] [fight-id|last]`
 **Purpose**: Display healing done by all players in a fight
 
 **Usage**:
 ```bash
 # Native binary
-./wclogs healing <report-code> <fight-id> [flags]
+./wclogs healing <report-code> <fight-id|last> [flags]
 
 # Container
-make container-run ARGS="healing <report-code> <fight-id> [flags]"
+make container-run ARGS="healing <report-code> <fight-id|last> [flags]"
 ```
 
 **Flags**: Same as damage command
@@ -108,7 +112,7 @@ make container-run ARGS="healing <report-code> <fight-id> [flags]"
 
 ## 💀 Advanced Analysis Commands
 
-### `wclogs deaths [report-code] [fight-id]`
+### `wclogs deaths [report-code] [fight-id|last]`
 **Purpose**: Advanced death analysis using Events API with real ability names
 
 **Two Modes**:
@@ -118,10 +122,10 @@ make container-run ARGS="healing <report-code> <fight-id> [flags]"
 **Usage**:
 ```bash
 # Native binary
-./wclogs deaths <report-code> <fight-id> [flags]
+./wclogs deaths <report-code> <fight-id|last> [flags]
 
 # Container
-make container-run ARGS="deaths <report-code> <fight-id> [flags]"
+make container-run ARGS="deaths <report-code> <fight-id|last> [flags]"
 ```
 
 **Flags**:
@@ -138,7 +142,7 @@ make container-run ARGS="deaths <report-code> <fight-id> [flags]"
 
 ---
 
-### `wclogs interrupts [report-code] [fight-id]`
+### `wclogs interrupts [report-code] [fight-id|last]`
 **Purpose**: Professional-grade interrupt analysis with spell correlation and missed opportunity tracking
 
 **Two Modes**:
@@ -148,10 +152,10 @@ make container-run ARGS="deaths <report-code> <fight-id> [flags]"
 **Usage**:
 ```bash
 # Native binary
-./wclogs interrupts <report-code> <fight-id> [flags]
+./wclogs interrupts <report-code> <fight-id|last> [flags]
 
 # Container
-make container-run ARGS="interrupts <report-code> <fight-id> [flags]"
+make container-run ARGS="interrupts <report-code> <fight-id|last> [flags]"
 ```
 
 **Flags**:
@@ -172,11 +176,13 @@ make container-run ARGS="interrupts <report-code> <fight-id> [flags]"
 ```bash
 # Native binary
 ./wclogs interrupts YMRqjzC2WPnhwNJd 2                      # Full interrupt overview
+./wclogs interrupts YMRqjzC2WPnhwNJd last                   # Last fight interrupt analysis
 ./wclogs interrupts YMRqjzC2WPnhwNJd 2 --player "BlagZeras"  # Player-specific detailed analysis
 ./wclogs interrupts YMRqjzC2WPnhwNJd 2 --verbose            # Verbose mode with API progress
 
 # Container
 make container-run ARGS="interrupts YMRqjzC2WPnhwNJd 2"
+make container-run ARGS="interrupts YMRqjzC2WPnhwNJd last"
 make container-run ARGS="interrupts YMRqjzC2WPnhwNJd 2 --player BlagZeras"
 make container-run ARGS="interrupts YMRqjzC2WPnhwNJd 2 --verbose"
 ```
@@ -195,6 +201,37 @@ All commands support these global flags:
 | `--help` | `-h` | Show command help |
 
 ---
+
+## 🎯 Fight ID Options
+
+All table and analysis commands now support two fight ID formats:
+- **Numeric ID**: `5`, `12`, `99` - Specific fight number
+- **"last" keyword**: `last` - Last meaningful boss encounter (matches WCL web interface)
+
+### 🔬 How "Last" Fight Resolution Works
+
+Our implementation uses **official Warcraft Logs API logic** discovered through documentation research:
+
+1. **Queries all fights** in the report
+2. **Filters out trash fights** using WCL's official rule: `encounterID = 0`
+3. **Selects the last remaining fight** (highest ID among boss encounters)
+
+This **perfectly matches** the WCL web interface `fight=last` behavior!
+
+**Discovery Source**: [WCL GraphQL API Documentation](https://www.warcraftlogs.com/v2-api-docs/warcraft/reportfight.doc.html)
+> "If the encounterID is 0, the fight is considered a trash fight."
+
+**Examples**:
+```bash
+./wclogs damage ABC123 5      # Specific fight
+./wclogs damage ABC123 last   # Last meaningful boss encounter
+./wclogs healing XYZ789 last  # Uses same logic across all commands
+
+# Verbose mode shows the resolution process:
+./wclogs damage ABC123 last --verbose
+# ⏭️  Skipping fight #38 (Trash) - trash fight (encounterID = 0)
+# ✅ Found last meaningful fight #36: Boss Name (KILL, encounterID: 1234)
+```
 
 ## 🎯 File Output Formats
 
@@ -223,20 +260,44 @@ make container-run ARGS="config"
 - Check available fights with damage/healing commands first
 - Fight IDs start from 1
 
+**"failed to resolve fight ID 'last'"**
+- Report may have no boss encounters (only trash fights)
+- All fights may have `encounterID = 0`
+- Use `--verbose` to see the resolution process
+
 **"Player 'Name' not found"**
 - Use exact player name (case-sensitive)
 - Check spelling and special characters
+
+### Understanding "Last" Fight Resolution
+
+If `fight=last` gives unexpected results:
+
+1. **Use verbose mode** to see what's happening:
+   ```bash
+   ./wclogs damage ABC123 last --verbose
+   ```
+
+2. **Check fight types**: Our tool skips trash fights (encounterID = 0)
+   - This matches WCL web interface behavior
+   - Sometimes the "last" meaningful fight isn't chronologically last
+
+3. **Compare with web interface**: 
+   - Open `https://www.warcraftlogs.com/reports/ABC123?fight=last&type=damage-done`
+   - Our tool should select the same fight the web interface shows
 
 ### Debug Mode
 Add `--verbose` to any command for detailed debugging:
 ```bash
 # Native binary
 ./wclogs deaths ABC123 5 --verbose
+./wclogs deaths ABC123 last --verbose  # Also works with "last"
 
 # Container
 make container-run ARGS="deaths ABC123 5 --verbose"
+make container-run ARGS="deaths ABC123 last --verbose"
 ```
-Shows API calls, response sizes, and processing steps.
+Shows API calls, response sizes, processing steps, and fight resolution when using "last".
 
 ---
 
@@ -247,5 +308,28 @@ Shows API calls, response sizes, and processing steps.
 | `players` | ❌ Missing | Future |
 | `timeline` | ❌ Not implemented | Future |
 | `boss-abilities` | ❌ Not implemented | Future |
+
+## 📚 API Research Insights
+
+During development, we made several key discoveries about the Warcraft Logs API:
+
+### 🎯 "Last" Fight Logic Discovery
+- **Challenge**: WCL web interface `fight=last` didn't match naive "chronologically last" approach
+- **Research**: Found official WCL GraphQL API documentation
+- **Discovery**: `encounterID = 0` officially marks trash fights
+- **Solution**: Filter out trash fights before selecting "last"
+- **Result**: Perfect match with web interface behavior
+
+### 🔍 GraphQL API Insights
+- **fightIDs parameter**: Only accepts `[Int]`, not strings like `"last"`
+- **Client-side resolution**: Web interface does same resolution we implemented
+- **encounterID field**: Key to distinguishing boss fights from trash
+- **Official documentation**: [WCL API Docs](https://www.warcraftlogs.com/v2-api-docs/)
+
+### 💡 Key Learnings
+- Always research official API documentation
+- Web interface behavior often reveals underlying API logic
+- GraphQL schemas contain crucial implementation details
+- Client-side processing sometimes necessary even with robust APIs
 
 For complete usage examples and detailed command information, see the [API Usage Examples](./docs/api_usage_examples.md) in the docs directory.

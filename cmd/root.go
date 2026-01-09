@@ -8,7 +8,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
+	"wclogs-cli/api"
+	"wclogs-cli/auth"
 	"wclogs-cli/config"
+	"wclogs-cli/models"
 )
 
 var rootCmd = &cobra.Command{
@@ -22,6 +25,7 @@ Fast, scriptable access to combat log data without browser overhead.
 
 Examples:
   wclogs damage ABC123 5      # Show damage table for fight 5
+  wclogs damage ABC123 last   # Show damage for last fight
   wclogs healing ABC123 5     # Show healing table
   wclogs deaths ABC123 5      # Show death analysis
 
@@ -87,14 +91,19 @@ func createTableHandler(tableType string) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// Parse arguments
 		reportCode := args[0]
-		fightID, err := strconv.Atoi(args[1])
+		fightIDStr := args[1]
+
+		// Get verbose flag early for potential fight resolution logging
+		verbose, _ := cmd.Flags().GetBool("verbose")
+
+		// Resolve fight ID (handles both numbers and "last" keyword)
+		fightID, err := resolveFightID(reportCode, fightIDStr, verbose)
 		if err != nil {
-			return fmt.Errorf("fight-id must be a number, got: %s", args[1])
+			return fmt.Errorf("failed to resolve fight ID '%s': %w", fightIDStr, err)
 		}
 
 		// Get flag values (inherited from root)
 		topN, _ := cmd.Flags().GetInt("top")
-		verbose, _ := cmd.Flags().GetBool("verbose")
 		outputPath, _ := cmd.Flags().GetString("output")
 		noColor, _ := cmd.Flags().GetBool("no-color")
 		playerName, _ := cmd.Flags().GetString("player")
@@ -108,15 +117,17 @@ func createTableHandler(tableType string) func(*cobra.Command, []string) error {
 func addTableCommands() {
 	// Damage command - WITH --player FLAG
 	var damageCmd = &cobra.Command{
-		Use:   "damage [report-code] [fight-id]",
+		Use:   "damage [report-code] [fight-id|last]",
 		Short: "🗡️  Show damage table for a fight",
 		Long: color.HiYellowString(`
 🗡️  DAMAGE TABLE COMMAND
 
 Display damage done by all players in a specific fight.
+Fight ID can be a number or "last" for the most recent fight.
 
 Examples:
   wclogs damage ABC123XYZ 5           # Show damage for fight 5
+  wclogs damage ABC123XYZ last        # Show damage for last fight
   wclogs damage ABC123XYZ 5 --top 10  # Show top 10 players only
   wclogs damage ABC123XYZ 5 --player "Pmpm"  # Show only specific player
   wclogs damage ABC123XYZ 5 --output damage.csv # Save to file
@@ -130,15 +141,17 @@ Examples:
 
 	// Healing command - NOW WITH --player FLAG
 	var healingCmd = &cobra.Command{
-		Use:   "healing [report-code] [fight-id]",
+		Use:   "healing [report-code] [fight-id|last]",
 		Short: "💚 Show healing table for a fight",
 		Long: color.HiGreenString(`
 💚 HEALING TABLE COMMAND
 
 Display healing done by all players in a specific fight.
+Fight ID can be a number or "last" for the most recent fight.
 
 Examples:
   wclogs healing ABC123XYZ 5           # Show healing for fight 5
+  wclogs healing ABC123XYZ last        # Show healing for last fight
   wclogs healing ABC123XYZ 5 --top 5   # Show top 5 healers only
   wclogs healing ABC123XYZ 5 --player "Sketch" # Show only specific player
   wclogs healing ABC123XYZ 5 --output healers.csv # Save to file
@@ -152,7 +165,7 @@ Examples:
 
 	// Deaths Analysis command - Uses Events API for death analysis
 	var deathsCmd = &cobra.Command{
-		Use:   "deaths [report-code] [fight-id]",
+		Use:   "deaths [report-code] [fight-id|last]",
 		Short: "💀 Death analysis with summary and detailed modes",
 		Long: color.HiRedString(`
 💀 DEATH ANALYSIS
@@ -160,9 +173,11 @@ Examples:
 Two modes available:
 • SUMMARY MODE (default): Concise overview of all deaths with timeline
 • DETAILED MODE: In-depth analysis with healing/defensive data
+Fight ID can be a number or "last" for the most recent fight.
 
 Examples:
   wclogs deaths Hw9TZc2WyrVKJLCa 99                    # Summary of all deaths
+  wclogs deaths Hw9TZc2WyrVKJLCa last                  # Summary for last fight
   wclogs deaths Hw9TZc2WyrVKJLCa 99 --player "Jusdis"  # Detailed analysis for specific player
   wclogs deaths Hw9TZc2WyrVKJLCa 99 --verbose          # Verbose summary mode
 `) + "\n",
@@ -179,15 +194,17 @@ Examples:
 
 	// Interrupt Analysis command - Uses Events API for interrupt analysis
 	var interruptCmd = &cobra.Command{
-		Use:   "interrupts [report-code] [fight-id]",
+		Use:   "interrupts [report-code] [fight-id|last]",
 		Short: "🎛️  Interrupt analysis with detailed breakdown",
 		Long: color.HiBlueString(`
 🎛️  INTERRUPT ANALYSIS
 
 Analyze interrupts performed and casts that were stopped during a fight.
+Fight ID can be a number or "last" for the most recent fight.
 
 Examples:
   wclogs interrupts Hw9TZc2WyrVKJLCa 99                    # Summary of all interrupts
+  wclogs interrupts Hw9TZc2WyrVKJLCa last                  # Summary for last fight
   wclogs interrupts Hw9TZc2WyrVKJLCa 99 --player "PlayerName"  # Detailed analysis for specific player
   wclogs interrupts Hw9TZc2WyrVKJLCa 99 --verbose          # Verbose interrupt analysis
 `) + "\n",
@@ -201,4 +218,104 @@ Examples:
 	interruptCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 	interruptCmd.Flags().StringP("player", "p", "", "Filter to specific player")
 	rootCmd.AddCommand(interruptCmd)
+}
+
+// resolveFightID resolves a fight ID string to an actual numeric fight ID
+// Supports both numeric IDs and the "last" keyword for the last fight in the report
+func resolveFightID(reportCode string, fightIDStr string, verbose bool) (int, error) {
+	// If it's already a number, parse and return it
+	if fightID, err := strconv.Atoi(fightIDStr); err == nil {
+		return fightID, nil
+	}
+
+	// Handle the "last" keyword
+	if fightIDStr == "last" {
+		if verbose {
+			color.HiBlue("🔍 Resolving 'last' fight ID for report %s...", reportCode)
+		}
+
+		// Setup API client for fight resolution
+		cfg, err := config.LoadConfig()
+		if err != nil {
+			return 0, fmt.Errorf("failed to load config: %w", err)
+		}
+
+		authClient := auth.NewClient(cfg.ClientID, cfg.ClientSecret)
+		apiClient := api.NewClient(authClient)
+
+		// Query for fight information
+		fightRequest := api.NewFightInfoRequest(reportCode)
+		response, err := apiClient.Query(fightRequest.Query, fightRequest.Variables)
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch fight info: %w", err)
+		}
+
+		// Parse fights from response
+		if response.Data == nil || response.Data.ReportData == nil || response.Data.ReportData.Report == nil {
+			return 0, fmt.Errorf("no fight data found in report")
+		}
+
+		fights := response.Data.ReportData.Report.Fights
+		if len(fights) == 0 {
+			return 0, fmt.Errorf("no fights found in report")
+		}
+
+		// Find the last meaningful fight (not just chronologically last)
+		lastMeaningfulFight := findLastMeaningfulFight(fights, verbose)
+		if lastMeaningfulFight == nil {
+			// Fallback to actual last fight if no meaningful fight found
+			lastMeaningfulFight = &fights[len(fights)-1]
+			if verbose {
+				color.HiYellow("⚠️  No meaningful fights found, using chronologically last fight")
+			}
+		}
+
+		if verbose {
+			color.HiGreen("✅ Resolved 'last' to fight #%d: %s", lastMeaningfulFight.ID, lastMeaningfulFight.Name)
+		}
+
+		return lastMeaningfulFight.ID, nil
+	}
+
+	// Invalid fight ID format
+	return 0, fmt.Errorf("fight-id must be a number or 'last', got: %s", fightIDStr)
+}
+
+// findLastMeaningfulFight finds the last fight that represents a meaningful boss encounter
+// Uses official WCL logic: fights with encounterID = 0 are considered trash fights
+func findLastMeaningfulFight(fights []models.Fight, verbose bool) *models.Fight {
+	if len(fights) == 0 {
+		return nil
+	}
+
+	var lastMeaningfulFight *models.Fight
+
+	// Go through fights in reverse order to find the last meaningful one
+	for i := len(fights) - 1; i >= 0; i-- {
+		fight := &fights[i]
+
+		// Official WCL logic: encounterID = 0 means trash fight
+		if fight.EncounterID == 0 {
+			if verbose {
+				color.HiBlack("⏭️  Skipping fight #%d (%s) - trash fight (encounterID = 0)",
+					fight.ID, fight.Name)
+			}
+			continue
+		}
+
+		// This is a meaningful encounter (boss fight)
+		lastMeaningfulFight = fight
+		if verbose {
+			killStatus := "WIPE"
+			if fight.Kill {
+				killStatus = "KILL"
+			}
+			duration := (fight.EndTime - fight.StartTime) / 1000 // Convert to seconds
+			color.HiGreen("✅ Found last meaningful fight #%d: %s (%s, %.1fs, encounterID: %d)",
+				fight.ID, fight.Name, killStatus, duration, fight.EncounterID)
+		}
+		break
+	}
+
+	return lastMeaningfulFight
 }

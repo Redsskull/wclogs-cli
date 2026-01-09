@@ -80,6 +80,7 @@ dev: build-local
 	@echo "🚀 Starting development mode..."
 	@echo "📝 Run './$(BINARY_NAME) config' to set up credentials first"
 	@echo "💡 Try: './$(BINARY_NAME) --help'"
+	@echo "💡 Example: './$(BINARY_NAME) damage ABC123 last'"
 
 # Quick setup for new users
 setup: deps build
@@ -176,4 +177,6 @@ help:
 	@echo ""
 	@echo "📝 Container Examples:"
 	@echo "   make container-run ARGS='config'"
+	@echo "   make container-run ARGS='config'"
 	@echo "   make container-run ARGS='damage ABC123 5'"
+	@echo "   make container-run ARGS='damage ABC123 last'"

@@ -37,6 +37,7 @@ I built this CLI tool to learn GraphQL by tackling a real-world challenge: the W
 **Successfully Implemented:**
 - ✅ **OAuth2 Authentication** - Full token management and refresh flow
 - ✅ **Complex GraphQL Queries** - Nested queries for damage, healing, deaths, and interrupts
+- ✅ **"Last" Fight Resolution** - Matches WCL web interface behavior using official encounterID logic
 - ✅ **Professional Terminal UI** - Clean tables with formatted output
 - ✅ **Advanced Data Analysis** - Death timelines with 5-second damage breakdown
 - ✅ **Professional Interrupt Analysis** - WCL-style interrupt tracking with spell correlation
@@ -51,6 +52,7 @@ I built this CLI tool to learn GraphQL by tackling a real-world challenge: the W
 - Parsing deeply nested JSON structures in Go
 - Correlating complex game events across multiple API responses
 - **Breakthrough discovery**: WCL's `extraAbilityGameID` field enables perfect interrupt-to-spell correlation
+- **WCL API insights**: `encounterID = 0` indicates trash fights; `fight=last` filters these out
 
 **Known Limitations (Learning Opportunities):**
 - Specialization detection not implemented (Holy vs Ret Paladin, etc.)
@@ -144,6 +146,7 @@ make container-run ARGS="damage ABC123 5"
 go install github.com/Redsskull/wclogs-cli@latest
 wclogs config
 wclogs damage 6qNJmgYBTcyfvpWF 3
+wclogs damage 6qNJmgYBTcyfvpWF last    # Last meaningful boss encounter
 wclogs healing 6qNJmgYBTcyfvpWF 3 --top 5
 wclogs deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp"
 wclogs interrupts YMRqjzC2WPnhwNJd 2
@@ -154,19 +157,22 @@ wclogs interrupts YMRqjzC2WPnhwNJd 2
 git clone https://github.com/Redsskull/wclogs-cli.git && cd wclogs-cli
 make container-run ARGS="config"
 make container-run ARGS="damage 6qNJmgYBTcyfvpWF 3"
+make container-run ARGS="damage 6qNJmgYBTcyfvpWF last"
 ```
 
 ## Command Examples
 
 **Damage Analysis:**
 ```bash
-wclogs damage 6qNJmgYBTcyfvpWF 3
-# Displays damage done by all players in fight #3
+wclogs damage 6qNJmgYBTcyfvpWF 3      # Specific fight number
+wclogs damage 6qNJmgYBTcyfvpWF last   # Last meaningful boss encounter
+# Uses WCL's official logic: filters out trash fights (encounterID = 0)
 ```
 
 **Healing with Filtering:**
 ```bash
-wclogs healing 6qNJmgYBTcyfvpWF 3 --top 5
+wclogs healing 6qNJmgYBTcyfvpWF 3 --top 5     # Specific fight
+wclogs healing 6qNJmgYBTcyfvpWF last --top 5   # Last meaningful fight
 # Shows top 5 healers with formatted table output
 ```
 
@@ -266,12 +272,13 @@ func (ic *InterruptCorrelator) parseRawInterruptJSON(data interface{}) ([]*model
 This demonstrates several key skills employers value:
 
 1. **Self-Directed Learning** - Took on GraphQL without prior experience
-2. **Complex Problem Solving** - OAuth2, nested queries, event correlation
+2. **Complex Problem Solving** - OAuth2, nested queries, event correlation, WCL API reverse-engineering
 3. **Professional Tool Building** - CLI design, error handling, user experience
-4. **Honest Assessment** - Can evaluate my own work and identify improvements
-5. **Practical Application** - Built a real tool, not just tutorials
+4. **API Research Skills** - Discovered official WCL logic through documentation analysis
+5. **Honest Assessment** - Can evaluate my own work and identify improvements
+6. **Practical Application** - Built a real tool, not just tutorials
 
-**Most importantly:** This shows I can learn complex technologies by building real projects, not just following tutorials.
+**Most importantly:** This shows I can learn complex technologies by building real projects, research official APIs to understand their behavior, and implement solutions that match professional web interfaces.
 
 ## Future Enhancements
 
@@ -342,6 +349,8 @@ I started this project to learn CLI development in Go and chose Warcraft Logs as
 - **Professional tools exist** - Postman, GraphQL playgrounds, etc.
 - **OAuth2 has nuance** - Token lifecycle, refresh flows, error handling
 - **Data visualization matters** - Clean terminal output requires thought
+- **API research is crucial** - Finding official documentation reveals the "why" behind web interface behavior
+- **WCL's "last" logic** - Uses `encounterID = 0` to filter trash fights, matching web interface perfectly
 
 
 This project pushed me beyond tutorials into real-world complexity. The incomplete features aren't failures—they're documented learning opportunities that show where I was then and how I'd approach them now.

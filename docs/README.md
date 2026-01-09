@@ -11,6 +11,9 @@ Welcome to the documentation for the Warcraft Logs CLI tool. This collection of 
 ### Configuration
 - [Configuration](configuration.md) - Setup, authentication, and configuration management details
 
+### Development Insights
+- [Fight Resolution Discovery](insights/fight-resolution-discovery.md) - How we discovered WCL's "last" fight logic through API research
+
 ### Coming Soon
 - Architecture - System architecture and design decisions
 - Testing - Test strategy and coverage information
@@ -18,11 +21,17 @@ Welcome to the documentation for the Warcraft Logs CLI tool. This collection of 
 - Troubleshooting - Advanced troubleshooting techniques
 - Contributing - How to contribute to the project
 
+### Research & Development
+- API Discovery Process - How we research and understand complex APIs
+- WCL GraphQL Insights - Technical discoveries about Warcraft Logs API behavior
+
 ## Getting Started
 
 New users should start with the [API Usage Examples](api_usage_examples.md) to understand how to use the tool effectively.
 
 Developers interested in the internal workings should review the [GraphQL Queries](graphql_queries.md) and [Configuration](configuration.md) documents.
+
+Those curious about our development process should check out the [Fight Resolution Discovery](insights/fight-resolution-discovery.md) to see how we researched and solved complex API integration challenges.
 
 ## Contributing to Documentation
 

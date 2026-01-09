@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"strconv"
+
 	"strings"
 	"time"
 
@@ -18,9 +18,10 @@ import (
 
 // ExecuteInterruptAnalysis provides comprehensive interrupt analysis using the correlation system
 func ExecuteInterruptAnalysis(reportCode string, fightIDStr string, playerName string, verbose bool) error {
-	fightID, err := strconv.Atoi(fightIDStr)
+	// Resolve fight ID (handles both numbers and "last" keyword)
+	fightID, err := resolveFightID(reportCode, fightIDStr, verbose)
 	if err != nil {
-		return fmt.Errorf("fight-id must be a number, got: %s", fightIDStr)
+		return fmt.Errorf("failed to resolve fight ID '%s': %w", fightIDStr, err)
 	}
 
 	if verbose {

@@ -196,10 +196,10 @@ query SingleAbilityLookup($abilityID: Int!) {
 **Usage**: Fetches the name and icon for a specific ability ID
 **Variables**:
 - `$abilityID`: Numeric ID of the ability
+## Fight Information Query
 
-**Returns**: Ability name and icon for display in death analysis
+Used to get basic information about all fights in a report. **Critical for "last" fight resolution**.
 
-### Fight Info Query
 ```graphql
 query FightInfo($code: String!) {
   reportData {
@@ -207,7 +207,7 @@ query FightInfo($code: String!) {
       fights {
         id
         name
-        encounterID
+        encounterID          # KEY FIELD: 0 = trash fight, >0 = boss encounter
         startTime
         endTime
         kill
@@ -218,6 +218,12 @@ query FightInfo($code: String!) {
   }
 }
 ```
+
+### Key Insights:
+- **encounterID = 0**: Trash fights (skipped by "last" resolution)
+- **encounterID > 0**: Boss encounters (meaningful fights)
+- **Fight resolution logic**: Filter by encounterID, take highest remaining ID
+- **Web interface parity**: Our logic matches WCL's `fight=last` behavior
 
 **Usage**: Fetches fight information including start/end times
 **Variables**:
