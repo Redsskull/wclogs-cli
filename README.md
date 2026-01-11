@@ -42,6 +42,7 @@ I built this CLI tool to learn GraphQL by tackling a real-world challenge: the W
 - ✅ **Advanced Data Analysis** - Death timelines with 5-second damage breakdown
 - ✅ **Professional Interrupt Analysis** - WCL-style interrupt tracking with spell correlation
 - ✅ **Smart Caching** - Efficient ability name lookups
+- ✅ **Player Management** - List all players with class/role filtering and search
 - ✅ **Player Filtering** - Case-insensitive search across reports
 - ✅ **Data Export** - CSV and JSON formats
 
@@ -150,6 +151,9 @@ wclogs damage 6qNJmgYBTcyfvpWF last    # Last meaningful boss encounter
 wclogs healing 6qNJmgYBTcyfvpWF 3 --top 5
 wclogs deaths 6qNJmgYBTcyfvpWF 3 --player "Tekkyysp"
 wclogs interrupts YMRqjzC2WPnhwNJd 2
+wclogs players 6qNJmgYBTcyfvpWF         # List all players in report
+wclogs players 6qNJmgYBTcyfvpWF 5       # List players in fight 5
+wclogs players 6qNJmgYBTcyfvpWF last    # List players in last fight
 ```
 
 **Container Installation:**
@@ -158,6 +162,9 @@ git clone https://github.com/Redsskull/wclogs-cli.git && cd wclogs-cli
 make container-run ARGS="config"
 make container-run ARGS="damage 6qNJmgYBTcyfvpWF 3"
 make container-run ARGS="damage 6qNJmgYBTcyfvpWF last"
+make container-run ARGS="players 6qNJmgYBTcyfvpWF"
+make container-run ARGS="players 6qNJmgYBTcyfvpWF 5"
+make container-run ARGS="players 6qNJmgYBTcyfvpWF last"
 ```
 
 ## Command Examples
@@ -194,10 +201,18 @@ wclogs interrupts YMRqjzC2WPnhwNJd 2 --verbose
 # Detailed analysis with API progress tracking
 ```
 
+**Player Management:**
+```bash
+wclogs players 6qNJmgYBTcyfvpWF 5 --role "Tank"     # Tanks in fight 5
+wclogs players 6qNJmgYBTcyfvpWF --class "Paladin"   # All Paladins in report
+wclogs players 6qNJmgYBTcyfvpWF last --search "Pmpm" # Search in last fight
+```
+
 **Export Options:**
 ```bash
 wclogs damage 6qNJmgYBTcyfvpWF 3 --output damage.csv
 wclogs healing 6qNJmgYBTcyfvpWF 3 --output healing.json
+wclogs players 6qNJmgYBTcyfvpWF 5 --output fight5_players.csv
 ```
 
 ## Code Highlights

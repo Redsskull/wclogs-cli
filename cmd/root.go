@@ -218,6 +218,53 @@ Examples:
 	interruptCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 	interruptCmd.Flags().StringP("player", "p", "", "Filter to specific player")
 	rootCmd.AddCommand(interruptCmd)
+
+	// Players command - List all players in a report
+	var playersCmd = &cobra.Command{
+		Use:   "players [report-code] [fight-id]",
+		Short: "👥 List all players in a report or specific fight",
+		Long: color.HiMagentaString(`
+👥 PLAYERS COMMAND
+
+List all players in a report with their classes, servers, and item levels.
+Supports filtering by class, role, or player name for easy searching.
+Optionally filter to players who participated in a specific fight.
+
+Examples:
+  wclogs players ABC123XYZ                      # List all players in report
+  wclogs players ABC123XYZ 5                    # List players in fight 5
+  wclogs players ABC123XYZ last                 # List players in last fight
+  wclogs players ABC123XYZ --class "Paladin"    # Filter by class
+  wclogs players ABC123XYZ --role "Tank"        # Filter by role
+  wclogs players ABC123XYZ --search "Pmpm"      # Search by player name
+  wclogs players ABC123XYZ --output players.csv # Export to file
+`) + "\n",
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			verbose, _ := cmd.Flags().GetBool("verbose")
+			classFilter, _ := cmd.Flags().GetString("class")
+			roleFilter, _ := cmd.Flags().GetString("role")
+			searchFilter, _ := cmd.Flags().GetString("search")
+			outputPath, _ := cmd.Flags().GetString("output")
+			topN, _ := cmd.Flags().GetInt("top")
+			noColor, _ := cmd.Flags().GetBool("no-color")
+
+			// Handle optional fight ID parameter
+			var fightIDStr string
+			if len(args) > 1 {
+				fightIDStr = args[1]
+			}
+
+			debug, _ := cmd.Flags().GetBool("debug")
+			return ExecutePlayersCommand(args[0], fightIDStr, classFilter, roleFilter, searchFilter, outputPath, topN, noColor, verbose, debug)
+		},
+	}
+	playersCmd.Flags().BoolP("no-color", "n", false, "Disable color output")
+	playersCmd.Flags().StringP("class", "c", "", "Filter by class (e.g., Paladin, Warrior)")
+	playersCmd.Flags().StringP("role", "r", "", "Filter by role (Tank, Healer, DPS)")
+	playersCmd.Flags().StringP("search", "s", "", "Search by player name")
+	playersCmd.Flags().BoolP("debug", "d", false, "Show detailed spec icon debugging information")
+	rootCmd.AddCommand(playersCmd)
 }
 
 // resolveFightID resolves a fight ID string to an actual numeric fight ID

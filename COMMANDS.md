@@ -33,6 +33,7 @@ For comprehensive documentation, see the [docs](./docs/) directory:
 | `healing` | ✅ Working | Show healing tables with player filtering |
 | `deaths` | ✅ Working | Advanced death analysis with Events API |
 | `interrupts` | ✅ Working | Professional interrupt analysis with spell correlation |
+| `players` | ✅ Working | List all players with class/role filtering and search |
 | `help` | ✅ Working | Show help for commands |
 | `completion` | ✅ Working | Generate shell completions |
 
@@ -187,6 +188,72 @@ make container-run ARGS="interrupts YMRqjzC2WPnhwNJd 2 --player BlagZeras"
 make container-run ARGS="interrupts YMRqjzC2WPnhwNJd 2 --verbose"
 ```
 
+### `wclogs players [report-code] [fight-id]`
+**Purpose**: List all players in a report or specific fight with advanced filtering capabilities
+
+**Usage**:
+```bash
+# Native binary
+./wclogs players <report-code> [fight-id] [flags]
+
+# Container
+make container-run ARGS="players <report-code> [fight-id] [flags]"
+```
+
+**Flags**:
+- `--class "ClassName"` - Filter by specific class (e.g., Paladin, Warrior)
+- `--role "RoleName"` - Filter by role (Tank, Healer, DPS)
+- `--search "PlayerName"` - Search by player name (partial match)
+- `--debug` - Show detailed spec icon debugging information
+- `--output file.csv` - Save to file (CSV/JSON supported)
+- `--top N` - Show only top N players
+- `--no-color` - Disable colored output
+- `--verbose` - Show detailed progress
+
+**Key Features**:
+- **Fight-Specific Filtering**: Optional fight ID parameter to show only fight participants
+- **Automatic Role Detection**: Smart role assignment based on class and spec
+- **Advanced Filtering**: Filter by class, role, or search by name
+- **Class Color Coding**: Each WoW class displayed in appropriate colors
+- **Composition Summary**: Shows role and class distribution
+- **Export Support**: Save player lists to CSV or JSON
+- **Server Information**: Displays player server/realm
+- **Smart Actor Filtering**: Automatically filters out NPCs, pets, and incomplete data
+
+**Examples**:
+```bash
+# Native binary
+./wclogs players 6qNJmgYBTcyfvpWF                       # List all players in report
+./wclogs players 6qNJmgYBTcyfvpWF 5                     # List players in fight 5
+./wclogs players 6qNJmgYBTcyfvpWF last                  # List players in last fight
+./wclogs players 6qNJmgYBTcyfvpWF --class "Paladin"     # Filter by class
+./wclogs players 6qNJmgYBTcyfvpWF --role "Tank"         # Filter by role
+./wclogs players 6qNJmgYBTcyfvpWF --search "Pmpm"       # Search by name
+./wclogs players 6qNJmgYBTcyfvpWF --output players.csv  # Export to file
+./wclogs players 6qNJmgYBTcyfvpWF 5 --role "DPS" --top 10 # Top 10 DPS in fight 5
+
+# Container
+make container-run ARGS="players 6qNJmgYBTcyfvpWF"
+make container-run ARGS="players 6qNJmgYBTcyfvpWF 5"
+make container-run ARGS="players 6qNJmgYBTcyfvpWF last"
+make container-run ARGS="players 6qNJmgYBTcyfvpWF --class Paladin"
+make container-run ARGS="players 6qNJmgYBTcyfvpWF --role Tank"
+```
+
+**Role Detection Logic**:
+The command automatically detects player roles using:
+- **Pure Classes**: Hunter, Mage, Rogue, Warlock → DPS
+- **Tank Classes**: Death Knight (Blood), Demon Hunter (Vengeance), Warrior (Protection)
+- **Hybrid Detection**: Uses spec icons when available for Druid, Monk, Paladin, Priest, Shaman, Evoker
+
+**Use Cases**:
+- **Fight Analysis**: See who participated in specific encounters
+- **Raid Planning**: Check composition balance before pulls
+- **Player Lookup**: Find exact player names for other commands
+- **Guild Management**: Export member lists for analysis
+- **Role Distribution**: Verify tank/healer/DPS ratios
+- **Clean Data**: Automatically filters out pets, NPCs, and incomplete entries
+
 ---
 
 ## 🌐 Global Flags
@@ -305,7 +372,6 @@ Shows API calls, response sizes, processing steps, and fight resolution when usi
 
 | Command | Status | Planned |
 |---------|--------|---------|
-| `players` | ❌ Missing | Future |
 | `timeline` | ❌ Not implemented | Future |
 | `boss-abilities` | ❌ Not implemented | Future |
 
