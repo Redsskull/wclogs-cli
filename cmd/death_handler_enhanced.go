@@ -430,6 +430,122 @@ func displayComprehensiveDeathAnalysis(damageSources []DamageSource, healingEven
 	}
 
 	fmt.Printf("    • This enhanced analysis combines WCL table data with event timelines\n")
+
+	// Section 2: Healing Timeline (like death CSV timeline but focused on healing)
+	if len(healingEvents) > 0 {
+		// Convert healing events to timeline format
+		var timelineEvents []*EnhancedTimelineEvent
+
+		for _, event := range healingEvents {
+			if event.Amount != nil && *event.Amount > 0 {
+				timeFromDeath := (event.Timestamp - deathTime) / 1000.0
+
+				timelineEvent := &EnhancedTimelineEvent{
+					TimeFromDeath: timeFromDeath,
+					Type:          "heal",
+					Amount:        *event.Amount,
+				}
+
+				if event.AbilityID != nil {
+					timelineEvent.AbilityName = lookupService.GetAbilityName(*event.AbilityID)
+				}
+				if event.SourceID != nil {
+					timelineEvent.SourceName = lookupService.GetActorName(*event.SourceID)
+				}
+
+				// Only include significant heals and those close to death
+				if *event.Amount >= 10000 {
+					timelineEvents = append(timelineEvents, timelineEvent)
+				}
+			}
+		}
+
+		// Add death event at 0.00s
+		deathEvent := &EnhancedTimelineEvent{
+			TimeFromDeath: 0.0,
+			Type:          "death",
+			AbilityName:   "Death",
+			SourceName:    "Killing Blow",
+			Amount:        0,
+		}
+		timelineEvents = append(timelineEvents, deathEvent)
+
+		// Sort by time (death first, then most recent)
+		sort.Slice(timelineEvents, func(i, j int) bool {
+			if timelineEvents[i].Type == "death" && timelineEvents[j].Type != "death" {
+				return true
+			}
+			if timelineEvents[j].Type == "death" && timelineEvents[i].Type != "death" {
+				return false
+			}
+			return timelineEvents[i].TimeFromDeath > timelineEvents[j].TimeFromDeath
+		})
+
+		fmt.Printf("    💚 HEALING ATTEMPTS (last 3 seconds):\n")
+		fmt.Printf("    ┌──────────┬─────────────────────────────────────────────┬──────────────────┐\n")
+		fmt.Printf("    │ Time     │ Ability                                     │ Amount           │\n")
+		fmt.Printf("    ├──────────┼─────────────────────────────────────────────┼──────────────────┤\n")
+
+		displayCount := 0
+		var totalHealing int64
+
+		for _, event := range timelineEvents {
+			if displayCount >= 15 { // Show top 15 most recent events
+				break
+			}
+
+			timeStr := formatTimeWCLStyle(event.TimeFromDeath, event.Type == "death")
+
+			if event.Type == "death" {
+				fmt.Printf("    │ %-8s │ %-43s │ %-16s │\n",
+					timeStr,
+					color.HiRedString("💀 Death Event"),
+					color.HiRedString("-"))
+			} else {
+				abilityStr := event.AbilityName
+				if event.SourceName != "" && event.SourceName != "Unknown" {
+					abilityStr = fmt.Sprintf("%s ← %s", event.AbilityName, event.SourceName)
+				}
+				if len(abilityStr) > 43 {
+					abilityStr = abilityStr[:40] + "..."
+				}
+
+				amountStr := color.HiGreenString("+%s", models.FormatNumber(int64(event.Amount)))
+				totalHealing += int64(event.Amount)
+
+				fmt.Printf("    │ %-8s │ %-43s │ %-16s │\n", timeStr, abilityStr, amountStr)
+			}
+			displayCount++
+		}
+
+		fmt.Printf("    └──────────┴─────────────────────────────────────────────┴──────────────────┘\n")
+		if totalHealing > 0 {
+			fmt.Printf("    📊 Total Healing Received: %s\n\n", color.HiGreenString(models.FormatNumber(totalHealing)))
+		}
+	} else {
+		fmt.Printf("    ⚠️  No healing events found\n\n")
+	}
+
+	// Section 3: Analysis Summary
+	fmt.Printf("    🔍 DEATH ANALYSIS SUMMARY:\n")
+	if len(damageSources) >= 2 {
+		fmt.Printf("    • Top damage source: %s (%s damage)\n",
+			color.HiYellowString(damageSources[0].AbilityName),
+			color.HiRedString(models.FormatNumber(damageSources[0].Amount)))
+		fmt.Printf("    • Second damage source: %s (%s damage)\n",
+			color.HiYellowString(damageSources[1].AbilityName),
+			color.HiRedString(models.FormatNumber(damageSources[1].Amount)))
+	} else if len(damageSources) == 1 {
+		fmt.Printf("    • Primary damage source: %s (%s damage)\n",
+			color.HiYellowString(damageSources[0].AbilityName),
+			color.HiRedString(models.FormatNumber(damageSources[0].Amount)))
+	}
+
+	if len(healingEvents) > 0 {
+		fmt.Printf("    • Healers attempted to save the player with %d healing spells\n", len(healingEvents))
+	}
+
+	fmt.Printf("    • This enhanced analysis combines WCL table data with event timelines\n")
 }
 
 // formatTimeWCLStyle formats time exactly like WCL CSV
