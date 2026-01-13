@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -17,7 +16,7 @@ import (
 )
 
 // ExecuteDeathAnalysis provides detailed death analysis using Events API
-func ExecuteDeathAnalysis(reportCode string, fightIDStr string, playerName string, verbose bool) error {
+func ExecuteDeathAnalysis(reportCode string, fightIDStr string, playerName string, verbose bool, enhanced bool) error {
 	// Resolve fight ID (handles both numbers and "last" keyword)
 	fightID, err := resolveFightID(reportCode, fightIDStr, verbose)
 	if err != nil {
@@ -151,7 +150,7 @@ func ExecuteDeathAnalysis(reportCode string, fightIDStr string, playerName strin
 	// Display death analysis - summary by default, detailed with flags
 	if playerName != "" {
 		// Single player detailed analysis
-		displayPlayerDeathAnalysis(events, playerLookup, currentFight, lookupService, apiClient, reportCode, fightID, playerName, verbose)
+		displayPlayerDeathAnalysis(events, playerLookup, currentFight, lookupService, apiClient, reportCode, fightID, playerName, verbose, enhanced)
 	} else {
 		// Fight summary for all deaths
 		displayDeathSummary(events, playerLookup, currentFight, lookupService, verbose)
@@ -257,8 +256,8 @@ func displayDeathSummary(events []*models.Event, playerLookup map[int]string, fi
 }
 
 // displayPlayerDeathAnalysis shows detailed analysis for a specific player
-func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]string, fight *models.Fight, lookupService *services.LookupService, apiClient *api.Client, reportCode string, fightID int, targetPlayerName string, verbose bool) {
-	color.HiRed("\n💀 DETAILED DEATH ANALYSIS: %s 💀\n", color.HiYellowString(targetPlayerName))
+func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]string, fight *models.Fight, lookupService *services.LookupService, apiClient *api.Client, reportCode string, fightID int, playerName string, verbose bool, enhanced bool) {
+	color.HiRed("\n💀 DETAILED DEATH ANALYSIS: %s 💀\n", color.HiYellowString(playerName))
 
 	fightDuration := time.Duration((fight.EndTime - fight.StartTime) * int64(time.Millisecond))
 	fmt.Printf("Fight: %s (Duration: %s)\n",
@@ -270,7 +269,7 @@ func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]str
 	var targetPlayerID int
 	for _, event := range events {
 		if event.Type == "death" && event.TargetID != nil {
-			if name, exists := playerLookup[*event.TargetID]; exists && strings.EqualFold(name, targetPlayerName) {
+			if name, exists := playerLookup[*event.TargetID]; exists && strings.EqualFold(name, playerName) {
 				playerDeaths = append(playerDeaths, event)
 				targetPlayerID = *event.TargetID
 			}
@@ -278,12 +277,12 @@ func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]str
 	}
 
 	if verbose {
-		fmt.Printf("🔍 Debug: Found player ID %d for '%s'\n", targetPlayerID, targetPlayerName)
+		fmt.Printf("🔍 Debug: Found player ID %d for '%s'\n", targetPlayerID, playerName)
 		fmt.Printf("🔍 Debug: Fight start time: %d ms\n", fight.StartTime)
 	}
 
 	if len(playerDeaths) == 0 {
-		color.HiGreen("🎉 %s survived the entire fight!\n", targetPlayerName)
+		color.HiGreen("🎉 %s survived the entire fight!\n", playerName)
 		return
 	}
 
@@ -328,7 +327,12 @@ func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]str
 		}
 
 		fmt.Printf("  📈 Events Around Death:\n")
-		displayDamageTimeline(apiClient, reportCode, fightID, actualPlayerID, startTime, event.Timestamp, lookupService, verbose)
+		if enhanced {
+			fmt.Printf("  🔬 ENHANCED ANALYSIS MODE\n")
+			executeEnhancedDeathAnalysis(apiClient, reportCode, fightID, actualPlayerID, startTime, event.Timestamp, lookupService, verbose)
+		} else {
+			displayDamageTimeline(apiClient, reportCode, fightID, actualPlayerID, startTime, event.Timestamp, lookupService, verbose)
+		}
 
 		// Get healing summary (not full timeline)
 		fmt.Printf("  💚 Healing Analysis:\n")
@@ -355,11 +359,11 @@ func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]str
 	// Player-specific insights
 	color.HiBlue("📊 INSIGHTS:")
 	if len(playerDeaths) > 1 {
-		fmt.Printf("• %s died %d times - focus on mechanics and survival\n", targetPlayerName, len(playerDeaths))
+		fmt.Printf("• %s died %d times - focus on mechanics and survival\n", playerName, len(playerDeaths))
 	}
 	if len(playerDeaths) == 1 {
 		survivalPct := (playerDeaths[0].Timestamp - fightStartTime) / float64(fight.EndTime-fight.StartTime) * 100
-		fmt.Printf("• %s survived %.1f%% of the fight\n", targetPlayerName, survivalPct)
+		fmt.Printf("• %s survived %.1f%% of the fight\n", playerName, survivalPct)
 	}
 }
 
@@ -419,23 +423,23 @@ func getDefensiveSummary(apiClient *api.Client, reportCode string, fightID, play
 	return defensiveCount
 }
 
-// displayDamageTimeline shows all events around death to find damage sources
+// displayDamageTimeline shows WCL-style death timeline with damage and healing events
 func displayDamageTimeline(apiClient *api.Client, reportCode string, fightID, playerID int, startTime, endTime float64, lookupService *services.LookupService, verbose bool) {
-	// Use shorter 5-second window around death for all events
+	// Use 3-second window to capture the complete death sequence like WCL CSV
 	deathTime := endTime
-	windowStart := deathTime - 5000 // 5 seconds before death
-	windowEnd := deathTime + 1000   // 1 second after death
+	windowStart := deathTime - 3000 // 3 seconds before death
+	windowEnd := deathTime + 100    // 0.1 seconds after death
 
 	if verbose {
-		fmt.Printf("    🔍 Debug: Querying ALL events for player %d\n", playerID)
-		fmt.Printf("    🔍 Debug: 5-second window: %.1fs to %.1fs\n",
-			windowStart/1000.0, windowEnd/1000.0)
+		fmt.Printf("    🔍 Debug: Querying death timeline for player %d\n", playerID)
+		fmt.Printf("    🔍 Debug: Death window: %.1f to %.1f (death at %.1f)\n",
+			windowStart, windowEnd, deathTime)
 	}
 
-	// Query all events targeting this player around death time
+	// Query ALL events targeting this player to build complete death timeline
 	request := &api.GraphQLRequest{
 		Query: `
-			query AllEventsAroundDeath($code: String!, $fightID: Int!, $playerID: Int!, $startTime: Float!, $endTime: Float!) {
+			query DeathTimelineEvents($code: String!, $fightID: Int!, $playerID: Int!, $startTime: Float!, $endTime: Float!) {
 				reportData {
 					report(code: $code) {
 						events(
@@ -443,7 +447,7 @@ func displayDamageTimeline(apiClient *api.Client, reportCode string, fightID, pl
 							targetID: $playerID,
 							startTime: $startTime,
 							endTime: $endTime,
-							limit: 100
+							limit: 200
 						) {
 							data
 						}
@@ -460,106 +464,209 @@ func displayDamageTimeline(apiClient *api.Client, reportCode string, fightID, pl
 	}
 	response, err := apiClient.Query(request.Query, request.Variables)
 	if err != nil {
-		fmt.Printf("    ❌ Failed to fetch damage data: %v\n", err)
+		fmt.Printf("    ❌ Failed to fetch death timeline: %v\n", err)
 		return
-	}
-
-	// Save raw response to debug file if needed
-	if verbose {
-		filename := fmt.Sprintf("events_debug_%s_%d_%d.json", reportCode, fightID, playerID)
-		if jsonData, err := json.MarshalIndent(response, "", "  "); err == nil {
-			if err := os.WriteFile(filename, jsonData, 0644); err == nil {
-				fmt.Printf("    🔍 Debug: Saved raw response to %s\n", filename)
-			}
-		}
 	}
 
 	if response.Data == nil || response.Data.ReportData == nil ||
 		response.Data.ReportData.Report == nil ||
 		response.Data.ReportData.Report.Events == nil {
-		fmt.Printf("    📊 No damage events found\n")
+		fmt.Printf("    📊 No events found in death timeline\n")
 		return
 	}
 
 	events, err := models.ParseEventsJSON(response.Data.ReportData.Report.Events.Data)
 	if err != nil {
-		fmt.Printf("    ❌ Failed to parse damage events: %v\n", err)
+		fmt.Printf("    ❌ Failed to parse death timeline: %v\n", err)
 		return
 	}
 
 	if verbose {
-		fmt.Printf("    🔍 Debug: Found %d total events\n", len(events))
-		if len(events) > 0 {
-			fmt.Printf("    🔍 Debug: First event type: %s, timestamp: %.0f\n", events[0].Type, events[0].Timestamp)
-			if len(events) > 1 {
-				fmt.Printf("    🔍 Debug: Last event type: %s, timestamp: %.0f\n", events[len(events)-1].Type, events[len(events)-1].Timestamp)
-			}
-		}
+		fmt.Printf("    🔍 Debug: Found %d events in death timeline\n", len(events))
 	}
 
 	if len(events) == 0 {
-		fmt.Printf("    📊 No events found in 5-second death window\n")
-		if verbose {
-			fmt.Printf("    💡 This might indicate instant-death mechanics\n")
-		}
+		fmt.Printf("    📊 No events found - likely instant death\n")
 		return
 	}
 
-	// Show all events around death time for context
-	fmt.Printf("    📊 Events in 5-second death window:\n")
-
+	// Filter and sort events by type and significance
+	var deathEvents []DeathTimelineEvent
 	totalDamage := 0
-	damageCount := 0
+	totalHealing := 0
 
 	for _, event := range events {
-		timeFromDeath := (deathTime - event.Timestamp) / 1000.0
-		timeLabel := fmt.Sprintf("%.1fs", timeFromDeath)
-		if timeFromDeath < 0 {
-			timeLabel = fmt.Sprintf("+%.1fs", -timeFromDeath)
-		}
+		timeFromDeath := (event.Timestamp - deathTime) / 1000.0
 
 		switch event.Type {
 		case "damage":
-			if event.Amount != nil {
-				damageCount++
+			if event.Amount != nil && *event.Amount > 0 {
 				totalDamage += *event.Amount
-
 				abilityName := "Unknown"
 				if event.AbilityID != nil {
 					abilityName = lookupService.GetAbilityName(*event.AbilityID)
 				}
-
 				sourceName := "Unknown"
 				if event.SourceID != nil {
 					sourceName = lookupService.GetActorName(*event.SourceID)
 				}
 
-				fmt.Printf("    • -%s: %s damage from %s (%s)\n",
-					timeLabel,
-					color.HiRedString("%d", *event.Amount),
-					color.HiMagentaString(sourceName),
-					color.HiYellowString(abilityName))
+				deathEvents = append(deathEvents, DeathTimelineEvent{
+					Time:        timeFromDeath,
+					Type:        "damage",
+					Amount:      *event.Amount,
+					AbilityName: abilityName,
+					SourceName:  sourceName,
+					EventType:   event.Type,
+				})
 			}
 		case "heal":
-			if verbose && event.Amount != nil {
-				fmt.Printf("    • -%s: %s healing\n",
-					timeLabel,
-					color.HiGreenString("%d", *event.Amount))
+			if event.Amount != nil && *event.Amount > 0 {
+				totalHealing += *event.Amount
+				abilityName := "Unknown"
+				if event.AbilityID != nil {
+					abilityName = lookupService.GetAbilityName(*event.AbilityID)
+				}
+				sourceName := "Unknown"
+				if event.SourceID != nil {
+					sourceName = lookupService.GetActorName(*event.SourceID)
+				}
+
+				deathEvents = append(deathEvents, DeathTimelineEvent{
+					Time:        timeFromDeath,
+					Type:        "heal",
+					Amount:      *event.Amount,
+					AbilityName: abilityName,
+					SourceName:  sourceName,
+					EventType:   event.Type,
+				})
 			}
 		case "death":
-			fmt.Printf("    • -%s: ⚰️  DEATH EVENT\n", timeLabel)
-		default:
-			if verbose {
-				fmt.Printf("    • -%s: %s event\n", timeLabel, event.Type)
+			abilityName := "Death"
+			if event.KillingAbilityGameID != nil {
+				abilityName = lookupService.GetAbilityName(*event.KillingAbilityGameID)
+			}
+			sourceName := "Environment"
+			if event.KillerID != nil {
+				sourceName = lookupService.GetActorName(*event.KillerID)
+			}
+			deathEvents = append(deathEvents, DeathTimelineEvent{
+				Time:        0.0,
+				Type:        "death",
+				Amount:      0,
+				AbilityName: abilityName,
+				SourceName:  sourceName,
+				EventType:   "death",
+			})
+		}
+	}
+
+	// Sort events WCL-style: Death first at 0.00s, then backwards chronologically
+	sort.Slice(deathEvents, func(i, j int) bool {
+		// Death events always first
+		if deathEvents[i].Type == "death" && deathEvents[j].Type != "death" {
+			return true
+		}
+		if deathEvents[j].Type == "death" && deathEvents[i].Type != "death" {
+			return false
+		}
+		// Then by time descending (closest to death first, like WCL CSV)
+		return deathEvents[i].Time > deathEvents[j].Time
+	})
+
+	// Display WCL-style death timeline matching CSV format
+	fmt.Printf("    💀 Death Timeline (WCL CSV format):\n")
+	fmt.Printf("    ┌─────────┬──────┬─────────────────────────────┬──────────────┐\n")
+	fmt.Printf("    │ Time    │ Type │ Ability → Source            │ Amount       │\n")
+	fmt.Printf("    ├─────────┼──────┼─────────────────────────────┼──────────────┤\n")
+
+	displayCount := 0
+	for _, event := range deathEvents {
+		// Limit to most significant events (like WCL web interface)
+		if displayCount >= 15 {
+			break
+		}
+
+		// Skip very small heals/damage unless close to death
+		if event.Type == "damage" && event.Amount < 50000 && event.Time < -0.5 {
+			continue
+		}
+		if event.Type == "heal" && event.Amount < 50000 && event.Time < -0.5 {
+			continue
+		}
+
+		// Format time like WCL CSV
+		timeStr := ""
+		if event.Type == "death" {
+			timeStr = "0.00s"
+		} else if event.Time == 0.0 {
+			timeStr = "-0.00s" // Special case for killing blow at death time
+		} else if event.Time > 0 {
+			timeStr = fmt.Sprintf("+%.2fs", event.Time)
+		} else {
+			timeStr = fmt.Sprintf("%.2fs", event.Time)
+		}
+
+		switch event.Type {
+		case "damage":
+			amountStr := color.HiRedString("%s", models.FormatNumber(int64(event.Amount)))
+			typeStr := color.HiRedString("DMG")
+			abilityStr := fmt.Sprintf("%s ← %s", event.AbilityName, event.SourceName)
+			if len(abilityStr) > 29 {
+				abilityStr = abilityStr[:26] + "..."
+			}
+			fmt.Printf("    │ %-7s │ %-4s │ %-29s │ %12s │\n",
+				timeStr, typeStr, abilityStr, amountStr)
+		case "heal":
+			amountStr := color.HiGreenString("+%s", models.FormatNumber(int64(event.Amount)))
+			typeStr := color.HiGreenString("HEAL")
+			abilityStr := fmt.Sprintf("%s ← %s", event.AbilityName, event.SourceName)
+			if len(abilityStr) > 29 {
+				abilityStr = abilityStr[:26] + "..."
+			}
+			fmt.Printf("    │ %-7s │ %-4s │ %-29s │ %12s │\n",
+				timeStr, typeStr, abilityStr, amountStr)
+		case "death":
+			typeStr := color.HiRedString("DEATH")
+			deathStr := fmt.Sprintf("%s ← %s", event.AbilityName, event.SourceName)
+			if len(deathStr) > 29 {
+				deathStr = deathStr[:26] + "..."
+			}
+			fmt.Printf("    │ %-7s │ %-4s │ %-29s │ %12s │\n",
+				timeStr, typeStr, deathStr, "")
+		}
+		displayCount++
+	}
+
+	fmt.Printf("    └─────────┴──────┴─────────────────────────────┴──────────────┘\n")
+
+	// Summary statistics matching WCL format
+	damageStr := color.HiRedString("%s", models.FormatNumber(int64(totalDamage)))
+	healingStr := color.HiGreenString("%s", models.FormatNumber(int64(totalHealing)))
+	fmt.Printf("    📊 Timeline Summary: %s damage taken, %s healing received\n", damageStr, healingStr)
+
+	// Calculate death window duration (from first major damage to death)
+	deathWindowDuration := 0.0
+	if len(deathEvents) > 1 {
+		for i := len(deathEvents) - 1; i >= 0; i-- {
+			if deathEvents[i].Type == "damage" && deathEvents[i].Amount > 500000 {
+				deathWindowDuration = -deathEvents[i].Time
+				break
 			}
 		}
 	}
 
-	if damageCount == 0 {
-		fmt.Printf("    💡 No damage events - likely environmental/scripted death\n")
-	} else {
-		fmt.Printf("    📊 Total damage in window: %s (%d events)\n",
-			color.HiRedString("%d", totalDamage), damageCount)
+	if deathWindowDuration > 0 {
+		fmt.Printf("    ⏱️  Death window: %.1fs (from first major damage to death)\n", deathWindowDuration)
 	}
+}
 
+// DeathTimelineEvent represents an event in the death timeline
+type DeathTimelineEvent struct {
+	Time        float64
+	Type        string
+	Amount      int
+	AbilityName string
+	SourceName  string
+	EventType   string
 }

@@ -185,11 +185,13 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verbose, _ := cmd.Flags().GetBool("verbose")
 			playerName, _ := cmd.Flags().GetString("player")
-			return ExecuteDeathAnalysis(args[0], args[1], playerName, verbose)
+			enhanced, _ := cmd.Flags().GetBool("enhanced")
+			return ExecuteDeathAnalysis(args[0], args[1], playerName, verbose, enhanced)
 		},
 	}
 	deathsCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 	deathsCmd.Flags().StringP("player", "p", "", "Filter to specific player")
+	deathsCmd.Flags().Bool("enhanced", false, "Enable enhanced WCL CSV-level analysis")
 	rootCmd.AddCommand(deathsCmd)
 
 	// Interrupt Analysis command - Uses Events API for interrupt analysis
@@ -218,6 +220,33 @@ Examples:
 	interruptCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 	interruptCmd.Flags().StringP("player", "p", "", "Filter to specific player")
 	rootCmd.AddCommand(interruptCmd)
+
+	// Research command - For investigating WCL API behavior
+	var researchCmd = &cobra.Command{
+		Use:   "research",
+		Short: "🔬 Research WCL GraphQL API behavior",
+		Long: color.HiMagentaString(`
+🔬 RESEARCH TOOLS
+
+Tools for investigating and understanding the WCL GraphQL API.
+These commands help discover API capabilities and debug issues.
+
+Examples:
+  wclogs research datatype    # Discover EventDataType enum values
+`) + "\n",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Set up API client
+			cfg, err := config.LoadConfig()
+			if err != nil {
+				return fmt.Errorf("failed to load config: %w", err)
+			}
+
+			authClient := auth.NewClient(cfg.ClientID, cfg.ClientSecret)
+			apiClient := api.NewClient(authClient)
+			return ResearchEventDataType(apiClient)
+		},
+	}
+	rootCmd.AddCommand(researchCmd)
 
 	// Players command - List all players in a report
 	var playersCmd = &cobra.Command{
