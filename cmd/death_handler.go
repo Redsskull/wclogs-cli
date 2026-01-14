@@ -16,7 +16,7 @@ import (
 )
 
 // ExecuteDeathAnalysis provides detailed death analysis using Events API
-func ExecuteDeathAnalysis(reportCode string, fightIDStr string, playerName string, verbose bool, enhanced bool) error {
+func ExecuteDeathAnalysis(reportCode string, fightIDStr string, playerName string, verbose bool) error {
 	// Resolve fight ID (handles both numbers and "last" keyword)
 	fightID, err := resolveFightID(reportCode, fightIDStr, verbose)
 	if err != nil {
@@ -150,7 +150,7 @@ func ExecuteDeathAnalysis(reportCode string, fightIDStr string, playerName strin
 	// Display death analysis - summary by default, detailed with flags
 	if playerName != "" {
 		// Single player detailed analysis
-		displayPlayerDeathAnalysis(events, playerLookup, currentFight, lookupService, apiClient, reportCode, fightID, playerName, verbose, enhanced)
+		displayPlayerDeathAnalysis(events, playerLookup, currentFight, lookupService, apiClient, reportCode, fightID, playerName, verbose)
 	} else {
 		// Fight summary for all deaths
 		displayDeathSummary(events, playerLookup, currentFight, lookupService, verbose)
@@ -256,7 +256,7 @@ func displayDeathSummary(events []*models.Event, playerLookup map[int]string, fi
 }
 
 // displayPlayerDeathAnalysis shows detailed analysis for a specific player
-func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]string, fight *models.Fight, lookupService *services.LookupService, apiClient *api.Client, reportCode string, fightID int, playerName string, verbose bool, enhanced bool) {
+func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]string, fight *models.Fight, lookupService *services.LookupService, apiClient *api.Client, reportCode string, fightID int, playerName string, verbose bool) {
 	color.HiRed("\n💀 DETAILED DEATH ANALYSIS: %s 💀\n", color.HiYellowString(playerName))
 
 	fightDuration := time.Duration((fight.EndTime - fight.StartTime) * int64(time.Millisecond))
@@ -327,31 +327,7 @@ func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]str
 		}
 
 		fmt.Printf("  📈 Events Around Death:\n")
-		if enhanced {
-			fmt.Printf("  🔬 ENHANCED ANALYSIS MODE\n")
-			executeEnhancedDeathAnalysis(apiClient, reportCode, fightID, actualPlayerID, startTime, event.Timestamp, lookupService, verbose)
-		} else {
-			displayDamageTimeline(apiClient, reportCode, fightID, actualPlayerID, startTime, event.Timestamp, lookupService, verbose)
-		}
-
-		// Get healing summary (not full timeline)
-		fmt.Printf("  💚 Healing Analysis:\n")
-		healingTotal := getHealingSummary(apiClient, reportCode, fightID, actualPlayerID, startTime, event.Timestamp)
-		if healingTotal > 0 {
-			fmt.Printf("    • Total healing: %s (healers tried hard!)\n",
-				color.HiGreenString("%d", healingTotal))
-		} else {
-			fmt.Printf("    • %s\n", color.HiYellowString("No significant healing - may have been unavoidable"))
-		}
-
-		// Get defensive abilities summary
-		fmt.Printf("  🛡️  Defensive Analysis:\n")
-		defensiveCount := getDefensiveSummary(apiClient, reportCode, fightID, actualPlayerID, startTime, event.Timestamp)
-		if defensiveCount > 0 {
-			fmt.Printf("    • Used %s defensive abilities\n", color.HiBlueString("%d", defensiveCount))
-		} else {
-			fmt.Printf("    • %s\n", color.HiYellowString("No defensives used - could have helped survive"))
-		}
+		executeEnhancedDeathAnalysis(apiClient, reportCode, fightID, actualPlayerID, startTime, event.Timestamp, lookupService, verbose)
 
 		fmt.Println()
 	}

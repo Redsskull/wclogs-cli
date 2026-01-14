@@ -163,35 +163,35 @@ Examples:
 	healingCmd.Flags().StringP("player", "p", "", "Filter by specific player name")
 	rootCmd.AddCommand(healingCmd)
 
-	// Deaths Analysis command - Uses Events API for death analysis
+	// Deaths Analysis command - Advanced analysis using WCL-style damage and healing data
 	var deathsCmd = &cobra.Command{
 		Use:   "deaths [report-code] [fight-id|last]",
-		Short: "💀 Death analysis with summary and detailed modes",
+		Short: "💀 Advanced death analysis with WCL-style damage and healing breakdown",
 		Long: color.HiRedString(`
-💀 DEATH ANALYSIS
+💀 DEATH ANALYSIS (Enhanced WCL-Style Analysis)
 
-Two modes available:
-• SUMMARY MODE (default): Concise overview of all deaths with timeline
-• DETAILED MODE: In-depth analysis with healing/defensive data
+Advanced death analysis combining:
+• Exact damage sources matching WCL web interface data
+• Detailed healing timeline with precise timing
+• Professional formatting with comprehensive insights
 Fight ID can be a number or "last" for the most recent fight.
 
 Examples:
-  wclogs deaths Hw9TZc2WyrVKJLCa 99                    # Summary of all deaths
-  wclogs deaths Hw9TZc2WyrVKJLCa last                  # Summary for last fight
+  wclogs deaths Hw9TZc2WyrVKJLCa 99                    # Analysis of all deaths in fight
+  wclogs deaths Hw9TZc2WyrVKJLCa last                  # Analysis for last fight
   wclogs deaths Hw9TZc2WyrVKJLCa 99 --player "Jusdis"  # Detailed analysis for specific player
-  wclogs deaths Hw9TZc2WyrVKJLCa 99 --verbose          # Verbose summary mode
+  wclogs deaths Hw9TZc2WyrVKJLCa 99 --verbose          # Verbose mode with API progress
 `) + "\n",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verbose, _ := cmd.Flags().GetBool("verbose")
 			playerName, _ := cmd.Flags().GetString("player")
-			enhanced, _ := cmd.Flags().GetBool("enhanced")
-			return ExecuteDeathAnalysis(args[0], args[1], playerName, verbose, enhanced)
+			return ExecuteDeathAnalysis(args[0], args[1], playerName, verbose)
 		},
 	}
 	deathsCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 	deathsCmd.Flags().StringP("player", "p", "", "Filter to specific player")
-	deathsCmd.Flags().Bool("enhanced", false, "Enable enhanced WCL CSV-level analysis")
+
 	rootCmd.AddCommand(deathsCmd)
 
 	// Interrupt Analysis command - Uses Events API for interrupt analysis
