@@ -223,7 +223,7 @@ Examples:
 
 	// Research command - For investigating WCL API behavior
 	var researchCmd = &cobra.Command{
-		Use:   "research",
+		Use:   "research [subcommand]",
 		Short: "🔬 Research WCL GraphQL API behavior",
 		Long: color.HiMagentaString(`
 🔬 RESEARCH TOOLS
@@ -231,8 +231,21 @@ Examples:
 Tools for investigating and understanding the WCL GraphQL API.
 These commands help discover API capabilities and debug issues.
 
+Available subcommands:
+  datatype    # Discover EventDataType enum values
+  damage      # Research damage events API approaches
+  timeline    # Research damage timeline chronology like WCL web interface
+  hptrack     # Research player HP timeline reconstruction
+  tableapi    # Research Table API for damage taken data with timestamps
+  parseapi    # Deep parse Table API DamageTaken responses for individual hits
+
 Examples:
   wclogs research datatype    # Discover EventDataType enum values
+  wclogs research damage      # Test damage events queries
+  wclogs research timeline    # Investigate WCL damage timeline construction
+  wclogs research hptrack     # Track player health progression
+  wclogs research tableapi    # Investigate Table API for damage taken data
+  wclogs research parseapi    # Parse Table API responses in detail
 `) + "\n",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set up API client
@@ -243,7 +256,28 @@ Examples:
 
 			authClient := auth.NewClient(cfg.ClientID, cfg.ClientSecret)
 			apiClient := api.NewClient(authClient)
-			return ResearchEventDataType(apiClient)
+
+			// Handle subcommands
+			if len(args) == 0 {
+				return ResearchEventDataType(apiClient)
+			}
+
+			switch args[0] {
+			case "datatype":
+				return ResearchEventDataType(apiClient)
+			case "damage":
+				return ResearchDamageEvents(apiClient)
+			case "timeline":
+				return ResearchDamageTimeline(apiClient)
+			case "hptrack":
+				return ResearchPlayerHPTimeline(apiClient)
+			case "tableapi":
+				return ResearchTableAPI(apiClient)
+			case "parseapi":
+				return ResearchTableAPIParsing(apiClient)
+			default:
+				return fmt.Errorf("unknown research subcommand: %s", args[0])
+			}
 		},
 	}
 	rootCmd.AddCommand(researchCmd)
