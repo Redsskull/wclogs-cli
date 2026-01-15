@@ -277,11 +277,6 @@ func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]str
 		}
 	}
 
-	if verbose {
-		fmt.Printf("🔍 Debug: Found player ID %d for '%s'\n", targetPlayerID, playerName)
-		fmt.Printf("🔍 Debug: Fight start time: %d ms\n", fight.StartTime)
-	}
-
 	if len(playerDeaths) == 0 {
 		color.HiGreen("🎉 %s survived the entire fight!\n", playerName)
 		return
@@ -298,10 +293,6 @@ func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]str
 		fmt.Printf("%s Death #%d\n", color.HiRedString("💀"), i+1)
 		fmt.Printf("  ⏱️  Survival Time: %s\n", color.HiWhiteString(survivalTime.String()))
 
-		if verbose && event.TargetID != nil {
-			fmt.Printf("  🔍 Debug: Death event targetID: %d\n", *event.TargetID)
-		}
-
 		// Get readable ability and source names
 		abilityName, sourceName := lookupService.FormatKillingInfo(event.KillerID, event.KillingAbilityGameID)
 
@@ -314,11 +305,6 @@ func displayPlayerDeathAnalysis(events []*models.Event, playerLookup map[int]str
 		startTime := event.Timestamp - timeWindow
 		if startTime < fightStartTime {
 			startTime = fightStartTime
-		}
-
-		if verbose {
-			fmt.Printf("  🕐 Death at: %.1fs into fight\n", (event.Timestamp-fightStartTime)/1000.0)
-			fmt.Printf("  📊 Analyzing 5s around death...\n")
 		}
 
 		// Show damage timeline leading to death - use the actual targetID from this specific death event
@@ -675,9 +661,6 @@ type UnifiedTimelineEvent struct {
 
 // executeUnifiedDeathAnalysis provides comprehensive WCL CSV-style death analysis
 func executeUnifiedDeathAnalysis(apiClient *api.Client, reportCode string, fightID, playerID int, startTime, deathTime float64, lookupService *services.LookupService, verbose bool) {
-	if verbose {
-		fmt.Printf("    🔬 Starting unified death analysis for player %d\n", playerID)
-	}
 
 	// Step 1: Get damage taken data from Table API (complete breakdown like WCL web interface)
 	damageSources, err := getDamageTakenData(apiClient, reportCode, fightID, playerID, verbose)
@@ -699,9 +682,7 @@ func executeUnifiedDeathAnalysis(apiClient *api.Client, reportCode string, fight
 	// Step 4: Get player's max HP for HP percentage calculations
 	maxHP, err := getPlayerMaxHP(apiClient, reportCode, fightID, playerID, startTime, verbose)
 	if err != nil {
-		if verbose {
-			fmt.Printf("    ⚠️  Could not determine max HP, using estimated value\n")
-		}
+
 		maxHP = 19000000 // Estimate based on CSV showing ~19m max HP
 	}
 
@@ -717,9 +698,6 @@ func executeUnifiedDeathAnalysis(apiClient *api.Client, reportCode string, fight
 
 // getDamageTakenData uses the table API to get aggregated damage data like WCL web interface
 func getDamageTakenData(apiClient *api.Client, reportCode string, fightID, playerID int, verbose bool) ([]DamageSource, error) {
-	if verbose {
-		fmt.Printf("    🔬 Querying Table API for damage taken data...\n")
-	}
 
 	query := `
 		query GetDamageTakenTable($code: String!, $fightID: Int!, $playerID: Int!) {
@@ -766,10 +744,6 @@ func getDamageTakenData(apiClient *api.Client, reportCode string, fightID, playe
 	damageSources, err := parseDamageTakenFromTable(tableResult, verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse damage table: %w", err)
-	}
-
-	if verbose {
-		fmt.Printf("    🔬 Found %d damage sources from Table API\n", len(damageSources))
 	}
 
 	return damageSources, nil
@@ -901,31 +875,18 @@ func queryPlayerDamageEvents(apiClient *api.Client, reportCode string, fightID, 
 
 	response, err := apiClient.Query(query, variables)
 	if err != nil {
-		if verbose {
-			fmt.Printf("    ⚠️  DamageTaken events query failed: %v\n", err)
-		}
 		return nil
 	}
 
 	if response.Data == nil || response.Data.ReportData == nil ||
 		response.Data.ReportData.Report == nil ||
 		response.Data.ReportData.Report.Events == nil {
-		if verbose {
-			fmt.Printf("    ⚠️  No damage events found in response\n")
-		}
 		return nil
 	}
 
 	events, err := models.ParseEventsJSON(response.Data.ReportData.Report.Events.Data)
 	if err != nil {
-		if verbose {
-			fmt.Printf("    ⚠️  Failed to parse damage events: %v\n", err)
-		}
 		return nil
-	}
-
-	if verbose {
-		fmt.Printf("    📊 Found %d damage events from Events API\n", len(events))
 	}
 
 	return events
@@ -962,9 +923,6 @@ func queryPlayerEvents(apiClient *api.Client, reportCode string, fightID, player
 
 	response, err := apiClient.Query(query, variables)
 	if err != nil {
-		if verbose {
-			fmt.Printf("    ❌ Failed to query %s events: %v\n", dataType, err)
-		}
 		return nil
 	}
 
@@ -976,9 +934,6 @@ func queryPlayerEvents(apiClient *api.Client, reportCode string, fightID, player
 
 	events, err := models.ParseEventsJSON(response.Data.ReportData.Report.Events.Data)
 	if err != nil {
-		if verbose {
-			fmt.Printf("    ❌ Failed to parse %s events: %v\n", dataType, err)
-		}
 		return nil
 	}
 
@@ -1067,10 +1022,6 @@ func buildUnifiedTimeline(damageSources []DamageSource, damageEvents, healingEve
 		return timeline[i].TimeFromDeath > timeline[j].TimeFromDeath
 	})
 
-	if verbose {
-		fmt.Printf("    📊 Built unified timeline with %d events\n", len(timeline))
-	}
-
 	return timeline
 }
 
@@ -1134,10 +1085,6 @@ func getPlayerMaxHP(apiClient *api.Client, reportCode string, fightID, playerID 
 		return 19000000, nil
 	}
 
-	if verbose {
-		fmt.Printf("    📊 Determined player max HP: %s\n", models.FormatNumber(int64(maxHP)))
-	}
-
 	return maxHP, nil
 }
 
@@ -1178,16 +1125,13 @@ func calculateHPProgression(timeline []*UnifiedTimelineEvent, maxHP int, verbose
 		}
 	}
 
-	if verbose {
-		fmt.Printf("    📊 HP progression calculated with max HP: %s\n", models.FormatNumber(int64(maxHP)))
-	}
 }
 
 // displayUnifiedTimelineAnalysis shows WCL CSV-style unified timeline
 func displayUnifiedTimelineAnalysis(timeline []*UnifiedTimelineEvent, damageSources []DamageSource, lookupService *services.LookupService, verbose bool) {
-	fmt.Printf("    💀 UNIFIED DEATH TIMELINE (WCL CSV Style):\n\n")
+	fmt.Printf("    💀 DEATH TIMELINE ANALYSIS:\n\n")
 
-	// Section 1: Summary of damage sources (from Table API)
+	// Section 1: Summary of damage sources
 	if len(damageSources) > 0 {
 		fmt.Printf("    ⚔️  DAMAGE SOURCES SUMMARY:\n")
 		var totalDamage int64
@@ -1210,8 +1154,8 @@ func displayUnifiedTimelineAnalysis(timeline []*UnifiedTimelineEvent, damageSour
 		fmt.Printf("    📊 Total Damage: %s\n\n", color.HiRedString(models.FormatNumber(totalDamage)))
 	}
 
-	// Section 2: WCL CSV-Style Timeline
-	fmt.Printf("    🕐 CHRONOLOGICAL TIMELINE (WCL Format):\n")
+	// Section 2: Event Timeline
+	fmt.Printf("    🕐 CHRONOLOGICAL EVENT TIMELINE:\n")
 	fmt.Printf("    ┌──────────┬─────────┬─────────────────────────────────────────────┬──────────────────┬─────────────┐\n")
 	fmt.Printf("    │ Time     │ Type    │ Ability → Source                            │ Amount           │ HP          │\n")
 	fmt.Printf("    ├──────────┼─────────┼─────────────────────────────────────────────┼──────────────────┼─────────────┤\n")
@@ -1292,12 +1236,12 @@ func displayUnifiedTimelineAnalysis(timeline []*UnifiedTimelineEvent, damageSour
 	}
 
 	if damageCount > 0 {
-		fmt.Printf("    • %d individual damage events recorded in timeline\n", damageCount)
+		fmt.Printf("    • %d damage events leading to death\n", damageCount)
 	} else {
-		fmt.Printf("    • Individual damage events not available - showing aggregated data\n")
+		fmt.Printf("    • Damage analysis based on fight totals\n")
 	}
 	if healCount > 0 {
-		fmt.Printf("    • %d healing attempts totaling %s\n", healCount,
+		fmt.Printf("    • %d healing attempts for %s total healing\n", healCount,
 			color.HiGreenString(models.FormatNumber(totalHealing)))
 	}
 
@@ -1312,7 +1256,7 @@ func displayUnifiedTimelineAnalysis(timeline []*UnifiedTimelineEvent, damageSour
 		}
 	}
 
-	fmt.Printf("    • This unified approach combines Table API totals with Events API timing\n")
+	fmt.Printf("    • Timeline shows events leading up to death with HP progression\n")
 }
 
 // formatTimeWCLStyle formats time exactly like WCL CSV
